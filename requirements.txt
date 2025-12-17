@@ -1,0 +1,20 @@
+# Cell Edge Movement Analysis - Python Requirements
+
+# Core numerical computing
+numpy>=1.19.0
+
+# Image processing
+scikit-image>=0.18.0
+tifffile>=2020.9.3
+
+# Scientific computing
+scipy>=1.5.0
+
+# Plotting and visualization
+matplotlib>=3.3.0
+
+# Note: tkinter is part of Python's standard library
+# On Linux systems, you may need to install it separately:
+#   Ubuntu/Debian: sudo apt-get install python3-tk
+#   Fedora/RHEL: sudo dnf install python3-tkinter
+#   Arch: sudo pacman -S tk
