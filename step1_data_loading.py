@@ -14,8 +14,8 @@ import json
 
 # Configuration
 CONFIG = {
-    'IMAGE_STACK_PATH': "/Users/george/Desktop/forJinghao_scripts/data/test_1/151_2019_07_29_TIRF_mKera_scratch_1_Pos7_rot30_crop_piezo1.tif",
-    'MASK_STACK_PATH': "/Users/george/Desktop/forJinghao_scripts/data/test_1/151_2019_07_29_TIRF_mKera_scratch_1_Pos7_rot30_crop_Mask.tif",
+    'IMAGE_STACK_PATH': "",  # Set via --image-stack-path or will search DATA_DIR
+    'MASK_STACK_PATH': "",  # Set via --mask-stack-path or will search DATA_DIR
     'OUTPUT_DIR': "step1_results",
     'NORMALIZE_FRAMES': True,  # Normalize each frame to its brightest pixel
     'NORMALIZATION_SCALE': 100.0,  # Scaling factor after normalization (multiply by this value)
@@ -71,6 +71,20 @@ def load_and_validate_data():
     """Load and validate image and mask stacks."""
     print("Step 1: Loading data...")
 
+    if not CONFIG['IMAGE_STACK_PATH']:
+        raise ValueError(
+            "IMAGE_STACK_PATH not set. Use --image-stack-path to specify the image file."
+        )
+    if not CONFIG['MASK_STACK_PATH']:
+        raise ValueError(
+            "MASK_STACK_PATH not set. Use --mask-stack-path to specify the mask file."
+        )
+
+    if not os.path.exists(CONFIG['IMAGE_STACK_PATH']):
+        raise FileNotFoundError(f"Image file not found: {CONFIG['IMAGE_STACK_PATH']}")
+    if not os.path.exists(CONFIG['MASK_STACK_PATH']):
+        raise FileNotFoundError(f"Mask file not found: {CONFIG['MASK_STACK_PATH']}")
+
     # Load images
     images = tifffile.imread(CONFIG['IMAGE_STACK_PATH'])
     masks = tifffile.imread(CONFIG['MASK_STACK_PATH'])
@@ -83,6 +97,22 @@ def load_and_validate_data():
         images = images[np.newaxis, ...]
     if masks.ndim == 2:
         masks = masks[np.newaxis, ...]
+
+    # Validate spatial dimension match
+    if images.shape[1:] != masks.shape[1:]:
+        raise ValueError(
+            f"Image and mask spatial dimensions do not match: "
+            f"images {images.shape[1:]} vs masks {masks.shape[1:]}. "
+            f"Both must have the same height and width."
+        )
+
+    # Validate frame count match
+    if images.shape[0] != masks.shape[0]:
+        print(f"WARNING: Frame count mismatch: images={images.shape[0]}, masks={masks.shape[0]}")
+        min_frames = min(images.shape[0], masks.shape[0])
+        print(f"  Using first {min_frames} frames from each.")
+        images = images[:min_frames]
+        masks = masks[:min_frames]
 
     print(f"Loaded {images.shape[0]} frames of size {images.shape[1]}x{images.shape[2]}")
 
