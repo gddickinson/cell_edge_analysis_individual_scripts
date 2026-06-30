@@ -1,0 +1,63 @@
+{
+  "frames": [
+    32,
+    49,
+    51,
+    84,
+    86,
+    90
+  ],
+  "whole_stack_gap_median_px": 48.5,
+  "whole_stack_gap_max_px": 197.0,
+  "per_method": {
+    "dic_baseline": {
+      "label": "DIC mask (baseline)",
+      "kind": "dic",
+      "median_intensity_at_edge": 10.84,
+      "median_gap_to_dic_px": 0.0,
+      "mean_coverage": 1.0
+    },
+    "otsu": {
+      "label": "Fluor: Otsu region",
+      "kind": "fluor",
+      "median_intensity_at_edge": 24.11,
+      "median_gap_to_dic_px": 124.25,
+      "mean_coverage": 0.316
+    },
+    "blob": {
+      "label": "Fluor: blurred blob",
+      "kind": "fluor",
+      "median_intensity_at_edge": 15.33,
+      "median_gap_to_dic_px": 113.5,
+      "mean_coverage": 0.543
+    },
+    "column_band": {
+      "label": "Fluor: top-of-band per column",
+      "kind": "fluor",
+      "median_intensity_at_edge": 15.96,
+      "median_gap_to_dic_px": 68.02,
+      "mean_coverage": 1.0
+    },
+    "ridge": {
+      "label": "Fluor: Sato ridge",
+      "kind": "fluor",
+      "median_intensity_at_edge": 11.34,
+      "median_gap_to_dic_px": 226.7,
+      "mean_coverage": 1.0
+    },
+    "chanvese": {
+      "label": "Chan-Vese (DIC init + fluor)",
+      "kind": "both",
+      "median_intensity_at_edge": 14.04,
+      "median_gap_to_dic_px": 2.0,
+      "mean_coverage": 1.0
+    },
+    "snap": {
+      "label": "DIC snapped to fluor peak",
+      "kind": "both",
+      "median_intensity_at_edge": 11.76,
+      "median_gap_to_dic_px": 1.57,
+      "mean_coverage": 1.0
+    }
+  }
+}
