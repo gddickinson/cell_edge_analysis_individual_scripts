@@ -19,6 +19,9 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 import tifffile
 
+import gui_help
+from gui_tooltips import attach
+
 class AnalysisGUI:
     def __init__(self, root):
         self.root = root
@@ -38,6 +41,10 @@ class AnalysisGUI:
         # Step 1 parameters
         self.normalize_frames = tk.BooleanVar(value=True)
         self.normalization_scale = tk.DoubleVar(value=100.0)
+        self.normalization_method = tk.StringVar(value="max")
+        self.normalization_percentile = tk.DoubleVar(value=99.9)
+        self.normalization_region = tk.StringVar(value="frame")
+        self.normalization_scope = tk.StringVar(value="per_frame")
         self.subtract_background = tk.BooleanVar(value=True)
         self.background_percentile = tk.DoubleVar(value=10.0)
 
@@ -57,6 +64,10 @@ class AnalysisGUI:
         self.n_points = tk.IntVar(value=10)
         self.target_points_displacement = tk.IntVar(value=5)
 
+        # Step 7 parameters
+        self.intensity_statistic = tk.StringVar(value="mean")
+        self.intensity_percentile = tk.DoubleVar(value=95.0)
+
         # Results data
         self.images = None
         self.masks = None
@@ -67,12 +78,16 @@ class AnalysisGUI:
         self.intensity_data = None
         self.movement_assignments = None
         self.correlation_results = None
+        self.intensity_label = "PIEZO1 Intensity"  # Updated from step7 results when loaded
 
         # Create UI
         self.create_ui()
 
     def create_ui(self):
         """Create the main user interface."""
+        # Menu bar (Help menu with the Analysis Guide)
+        self.create_menubar()
+
         # Create notebook for tabs
         self.notebook = ttk.Notebook(self.root)
         self.notebook.pack(fill='both', expand=True, padx=5, pady=5)
@@ -97,6 +112,47 @@ class AnalysisGUI:
         self.notebook.add(self.correlation_tab, text="Correlation Analysis")
         self.create_correlation_tab()
 
+    def create_menubar(self):
+        """Create the top menu bar with a Help menu."""
+        menubar = tk.Menu(self.root)
+
+        help_menu = tk.Menu(menubar, tearoff=0)
+        help_menu.add_command(label="Analysis Guide (steps & math)...",
+                              command=lambda: gui_help.show_help_window(self.root))
+        help_menu.add_separator()
+        help_menu.add_command(label="About...",
+                              command=lambda: gui_help.show_about(self.root))
+        menubar.add_cascade(label="Help", menu=help_menu)
+
+        self.root.config(menu=menubar)
+
+    def apply_robust_normalization_preset(self):
+        """Set a robust, time-consistent normalization (percentile / in-mask / global)."""
+        self.normalize_frames.set(True)
+        self.normalization_method.set("percentile")
+        self.normalization_percentile.set(99.9)
+        self.normalization_region.set("mask")
+        self.normalization_scope.set("global")
+        self.subtract_background.set(True)
+        self.log("Applied ROBUST normalization preset: percentile 99.9, in-mask, "
+                 "global scope. (Re-run Step 1 onward; values are not comparable "
+                 "to runs made with the default preset.)")
+        # Rebuild Step 1 controls so the comboboxes reflect the new values
+        if "Step 1" in self.step_var.get():
+            self.create_step1_params()
+
+    def apply_default_normalization_preset(self):
+        """Restore the original normalization (max / whole-frame / per-frame)."""
+        self.normalize_frames.set(True)
+        self.normalization_method.set("max")
+        self.normalization_percentile.set(99.9)
+        self.normalization_region.set("frame")
+        self.normalization_scope.set("per_frame")
+        self.log("Restored DEFAULT normalization preset: brightest-pixel reference, "
+                 "whole frame, per-frame scope.")
+        if "Step 1" in self.step_var.get():
+            self.create_step1_params()
+
     def create_setup_tab(self):
         """Create the setup and run tab."""
         # Main container with scrollbar
@@ -117,16 +173,22 @@ class AnalysisGUI:
         file_frame.pack(fill='x', padx=10, pady=5)
 
         ttk.Label(file_frame, text="Image Stack:").grid(row=0, column=0, sticky='w', pady=2)
-        ttk.Entry(file_frame, textvariable=self.image_stack_path, width=60).grid(row=0, column=1, padx=5)
-        ttk.Button(file_frame, text="Browse", command=self.browse_image_stack).grid(row=0, column=2)
+        attach(ttk.Entry(file_frame, textvariable=self.image_stack_path, width=60),
+               'image_stack').grid(row=0, column=1, padx=5)
+        attach(ttk.Button(file_frame, text="Browse", command=self.browse_image_stack),
+               'image_stack').grid(row=0, column=2)
 
         ttk.Label(file_frame, text="Mask Stack:").grid(row=1, column=0, sticky='w', pady=2)
-        ttk.Entry(file_frame, textvariable=self.mask_stack_path, width=60).grid(row=1, column=1, padx=5)
-        ttk.Button(file_frame, text="Browse", command=self.browse_mask_stack).grid(row=1, column=2)
+        attach(ttk.Entry(file_frame, textvariable=self.mask_stack_path, width=60),
+               'mask_stack').grid(row=1, column=1, padx=5)
+        attach(ttk.Button(file_frame, text="Browse", command=self.browse_mask_stack),
+               'mask_stack').grid(row=1, column=2)
 
         ttk.Label(file_frame, text="Output Directory:").grid(row=2, column=0, sticky='w', pady=2)
-        ttk.Entry(file_frame, textvariable=self.output_base_dir, width=60).grid(row=2, column=1, padx=5)
-        ttk.Button(file_frame, text="Browse", command=self.browse_output_dir).grid(row=2, column=2)
+        attach(ttk.Entry(file_frame, textvariable=self.output_base_dir, width=60),
+               'output_dir').grid(row=2, column=1, padx=5)
+        attach(ttk.Button(file_frame, text="Browse", command=self.browse_output_dir),
+               'output_dir').grid(row=2, column=2)
 
         # Parameters Section
         self.create_parameters_section(scrollable_frame)
@@ -135,11 +197,14 @@ class AnalysisGUI:
         control_frame = ttk.Frame(scrollable_frame)
         control_frame.pack(fill='x', padx=10, pady=10)
 
-        ttk.Button(control_frame, text="Run All Steps", command=self.run_all_steps,
-                  style='Accent.TButton').pack(side='left', padx=5)
-        ttk.Button(control_frame, text="Run Selected Step", command=self.run_selected_step).pack(side='left', padx=5)
-        ttk.Button(control_frame, text="Load Results", command=self.load_results).pack(side='left', padx=5)
-        ttk.Button(control_frame, text="Clear Log", command=self.clear_log).pack(side='left', padx=5)
+        attach(ttk.Button(control_frame, text="Run All Steps", command=self.run_all_steps,
+                  style='Accent.TButton'), 'run_all').pack(side='left', padx=5)
+        attach(ttk.Button(control_frame, text="Run Selected Step", command=self.run_selected_step),
+               'run_step').pack(side='left', padx=5)
+        attach(ttk.Button(control_frame, text="Load Results", command=self.load_results),
+               'load_results').pack(side='left', padx=5)
+        attach(ttk.Button(control_frame, text="Clear Log", command=self.clear_log),
+               'clear_log').pack(side='left', padx=5)
 
         # Progress Bar
         self.progress = ttk.Progressbar(scrollable_frame, mode='indeterminate')
@@ -183,6 +248,7 @@ class AnalysisGUI:
                                  state='readonly', width=40)
         step_combo.pack(side='left', padx=5)
         step_combo.bind('<<ComboboxSelected>>', self.on_step_selected)
+        attach(step_combo, 'step_selector')
 
         # Parameter container
         self.param_container = ttk.Frame(params_frame)
@@ -194,19 +260,51 @@ class AnalysisGUI:
     def create_step1_params(self):
         """Create Step 1 parameter controls."""
         self.clear_param_container()
+        c = self.param_container
 
-        # Use pre-initialized variables
-        ttk.Checkbutton(self.param_container, text="Normalize Frames",
-                       variable=self.normalize_frames).grid(row=0, column=0, sticky='w', pady=2)
+        attach(ttk.Checkbutton(c, text="Normalize Frames", variable=self.normalize_frames),
+               'normalize_frames').grid(row=0, column=0, sticky='w', pady=2)
 
-        ttk.Label(self.param_container, text="Normalization Scale:").grid(row=1, column=0, sticky='w', pady=2)
-        ttk.Entry(self.param_container, textvariable=self.normalization_scale, width=15).grid(row=1, column=1, sticky='w', padx=5)
+        ttk.Label(c, text="Normalization Scale:").grid(row=1, column=0, sticky='w', pady=2)
+        attach(ttk.Entry(c, textvariable=self.normalization_scale, width=15),
+               'normalization_scale').grid(row=1, column=1, sticky='w', padx=5)
 
-        ttk.Checkbutton(self.param_container, text="Subtract Background",
-                       variable=self.subtract_background).grid(row=2, column=0, sticky='w', pady=2)
+        ttk.Label(c, text="Norm. Reference:").grid(row=2, column=0, sticky='w', pady=2)
+        attach(ttk.Combobox(c, textvariable=self.normalization_method, values=["max", "percentile"],
+                            state='readonly', width=13), 'normalization_method').grid(row=2, column=1, sticky='w', padx=5)
 
-        ttk.Label(self.param_container, text="Background Percentile:").grid(row=3, column=0, sticky='w', pady=2)
-        ttk.Entry(self.param_container, textvariable=self.background_percentile, width=15).grid(row=3, column=1, sticky='w', padx=5)
+        ttk.Label(c, text="Norm. Percentile:").grid(row=3, column=0, sticky='w', pady=2)
+        attach(ttk.Entry(c, textvariable=self.normalization_percentile, width=15),
+               'normalization_percentile').grid(row=3, column=1, sticky='w', padx=5)
+
+        ttk.Label(c, text="Norm. Region:").grid(row=4, column=0, sticky='w', pady=2)
+        attach(ttk.Combobox(c, textvariable=self.normalization_region, values=["frame", "mask"],
+                            state='readonly', width=13), 'normalization_region').grid(row=4, column=1, sticky='w', padx=5)
+
+        ttk.Label(c, text="Norm. Scope:").grid(row=5, column=0, sticky='w', pady=2)
+        attach(ttk.Combobox(c, textvariable=self.normalization_scope, values=["per_frame", "global"],
+                            state='readonly', width=13), 'normalization_scope').grid(row=5, column=1, sticky='w', padx=5)
+
+        attach(ttk.Checkbutton(c, text="Subtract Background", variable=self.subtract_background),
+               'subtract_background').grid(row=6, column=0, sticky='w', pady=2)
+
+        ttk.Label(c, text="Background Percentile:").grid(row=7, column=0, sticky='w', pady=2)
+        attach(ttk.Entry(c, textvariable=self.background_percentile, width=15),
+               'background_percentile').grid(row=7, column=1, sticky='w', padx=5)
+
+        # Normalization presets
+        preset_frame = ttk.Frame(c)
+        preset_frame.grid(row=8, column=0, columnspan=2, sticky='w', pady=(8, 0))
+        attach(ttk.Button(preset_frame, text="Robust preset",
+                         command=self.apply_robust_normalization_preset),
+               'robust_preset').pack(side='left', padx=(0, 5))
+        attach(ttk.Button(preset_frame, text="Default preset",
+                         command=self.apply_default_normalization_preset),
+               'default_preset').pack(side='left')
+
+        ttk.Label(c, text="Reference = value mapped to the scale (what '100' means). "
+                          "See Help -> Analysis Guide.",
+                 foreground='gray').grid(row=9, column=0, columnspan=2, sticky='w', pady=(6, 0))
 
     def create_step2_params(self):
         """Create Step 2 parameter controls."""
@@ -254,6 +352,23 @@ class AnalysisGUI:
         ttk.Label(self.param_container, text="Target Points (displacement):").grid(row=2, column=0, sticky='w', pady=2)
         ttk.Entry(self.param_container, textvariable=self.target_points_displacement, width=15).grid(row=2, column=1, sticky='w', padx=5)
 
+    def create_step7_params(self):
+        """Create Step 7 parameter controls."""
+        self.clear_param_container()
+
+        ttk.Label(self.param_container, text="Intensity Statistic:").grid(row=0, column=0, sticky='w', pady=2)
+        attach(ttk.Combobox(self.param_container, textvariable=self.intensity_statistic,
+                    values=["mean", "max", "percentile"], state='readonly', width=20),
+               'intensity_statistic').grid(row=0, column=1, sticky='w', padx=5)
+
+        ttk.Label(self.param_container, text="Intensity Percentile:").grid(row=1, column=0, sticky='w', pady=2)
+        attach(ttk.Entry(self.param_container, textvariable=self.intensity_percentile, width=15),
+               'intensity_percentile').grid(row=1, column=1, sticky='w', padx=5)
+
+        ttk.Label(self.param_container,
+                 text="How pixels inside each sampling rectangle are aggregated.",
+                 foreground='gray').grid(row=2, column=0, columnspan=2, sticky='w', pady=(6, 0))
+
     def clear_param_container(self):
         """Clear all widgets from parameter container."""
         for widget in self.param_container.winfo_children():
@@ -273,6 +388,8 @@ class AnalysisGUI:
             self.create_step4_params()
         elif "Step 5" in step:
             self.create_step5_params()
+        elif "Step 7" in step:
+            self.create_step7_params()
         else:
             self.clear_param_container()
             ttk.Label(self.param_container, text="No configurable parameters for this step").pack(pady=10)
@@ -288,9 +405,10 @@ class AnalysisGUI:
         self.view_var = tk.StringVar(value="Overview")
         views = ["Overview", "Edge Detection", "Displacement", "Classification",
                 "Sampling", "Intensity"]
-        ttk.Combobox(control_frame, textvariable=self.view_var, values=views,
-                    state='readonly', width=20).pack(side='left', padx=5)
-        ttk.Button(control_frame, text="Update View", command=self.update_results_view).pack(side='left', padx=5)
+        attach(ttk.Combobox(control_frame, textvariable=self.view_var, values=views,
+                    state='readonly', width=20), 'view_selector').pack(side='left', padx=5)
+        attach(ttk.Button(control_frame, text="Update View", command=self.update_results_view),
+               'update_view').pack(side='left', padx=5)
 
         # Frame navigation
         nav_frame = ttk.Frame(control_frame)
@@ -301,6 +419,7 @@ class AnalysisGUI:
 
         self.frame_label = ttk.Label(nav_frame, text="Frame: 0 / 0")
         self.frame_label.pack(side='left', padx=10)
+        attach(self.frame_label, 'frame_nav')
 
         ttk.Button(nav_frame, text="►", command=self.next_frame, width=4).pack(side='left', padx=2)
         ttk.Button(nav_frame, text="►►", command=self.last_frame, width=4).pack(side='left', padx=2)
@@ -335,8 +454,8 @@ class AnalysisGUI:
         ttk.Label(control_frame, text="Correlation Analysis - Final Summary Plots",
                  font=('TkDefaultFont', 12, 'bold')).pack(side='left', padx=5)
 
-        ttk.Button(control_frame, text="Load Correlation Results",
-                  command=self.load_correlation_plots).pack(side='right', padx=5)
+        attach(ttk.Button(control_frame, text="Load Correlation Results",
+                  command=self.load_correlation_plots), 'correlation_load').pack(side='right', padx=5)
 
         # Figure selection frame
         fig_frame = ttk.Frame(self.correlation_tab)
@@ -345,8 +464,8 @@ class AnalysisGUI:
         ttk.Label(fig_frame, text="Select Plot:").pack(side='left', padx=5)
         self.correlation_fig_var = tk.StringVar(value="Scatter Plot")
         fig_options = ["Scatter Plot", "Binned Analysis", "Summary Statistics"]
-        ttk.Combobox(fig_frame, textvariable=self.correlation_fig_var, values=fig_options,
-                    state='readonly', width=25).pack(side='left', padx=5)
+        attach(ttk.Combobox(fig_frame, textvariable=self.correlation_fig_var, values=fig_options,
+                    state='readonly', width=25), 'correlation_figure').pack(side='left', padx=5)
         ttk.Button(fig_frame, text="Update",
                   command=self.update_correlation_view).pack(side='left', padx=5)
 
@@ -505,6 +624,10 @@ class AnalysisGUI:
                     '--mask-stack-path', self.mask_stack_path.get(),
                     '--normalize-frames', str(self.normalize_frames.get()).lower(),
                     '--normalization-scale', str(self.normalization_scale.get()),
+                    '--normalization-method', self.normalization_method.get(),
+                    '--normalization-percentile', str(self.normalization_percentile.get()),
+                    '--normalization-region', self.normalization_region.get(),
+                    '--normalization-scope', self.normalization_scope.get(),
                     '--subtract-background', str(self.subtract_background.get()).lower(),
                     '--background-percentile', str(self.background_percentile.get())
                 ])
@@ -564,6 +687,10 @@ class AnalysisGUI:
                 cmd.extend(['--input-dir-step1', input_dir_step1])
                 cmd.extend(['--input-dir-step2', input_dir_step2])
                 cmd.extend(['--input-dir-step6', input_dir_step6])
+                cmd.extend([
+                    '--intensity-statistic', self.intensity_statistic.get(),
+                    '--intensity-percentile', str(self.intensity_percentile.get())
+                ])
             elif "step8" in script:
                 # Step 8 needs step3 (displacement/movement) and step7 (intensities)
                 input_dir_step3 = os.path.join(self.output_base_dir.get(), "step3_results")
@@ -706,6 +833,13 @@ class AnalysisGUI:
                     with open(os.path.join(step7_dir, 'intensity_data.pkl'), 'rb') as f:
                         self.intensity_data = pickle.load(f)
                     self.log("  ✓ Loaded intensity data")
+                    # Pick up the intensity axis label (reflects normalization + statistic)
+                    try:
+                        with open(os.path.join(step7_dir, 'intensity_statistics.json')) as f:
+                            self.intensity_label = json.load(f).get(
+                                'intensity_label', self.intensity_label)
+                    except (FileNotFoundError, json.JSONDecodeError):
+                        pass
                 else:
                     self.log(f"  Note: Step 7 results not found at {step7_dir}")
             except Exception as e:
@@ -1069,7 +1203,7 @@ class AnalysisGUI:
         if valid_intensities:
             axes[1].hist(valid_intensities, bins=15, edgecolor='black', alpha=0.7)
             axes[1].axvline(x=np.mean(valid_intensities), color='r', linestyle='--', linewidth=2, label='Mean')
-            axes[1].set_xlabel('Intensity')
+            axes[1].set_xlabel(self.intensity_label)
             axes[1].set_ylabel('Count')
             axes[1].set_title(f'Distribution (Mean: {np.mean(valid_intensities):.1f})')
             axes[1].legend()

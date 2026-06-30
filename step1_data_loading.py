@@ -19,6 +19,10 @@ CONFIG = {
     'OUTPUT_DIR': "step1_results",
     'NORMALIZE_FRAMES': True,  # Normalize each frame to its brightest pixel
     'NORMALIZATION_SCALE': 100.0,  # Scaling factor after normalization (multiply by this value)
+    'NORMALIZATION_METHOD': 'max',  # Reference value: 'max' or 'percentile' (robust to hot pixels)
+    'NORMALIZATION_PERCENTILE': 99.9,  # Percentile used when NORMALIZATION_METHOD='percentile'
+    'NORMALIZATION_REGION': 'frame',  # Compute reference over 'frame' (all pixels) or 'mask' (in-cell only)
+    'NORMALIZATION_SCOPE': 'per_frame',  # 'per_frame' (each frame own ref) or 'global' (one ref for stack)
     'SUBTRACT_BACKGROUND': True,  # Subtract background before normalization
     'BACKGROUND_PERCENTILE': 10,  # Percentile of histogram to use as background (0-100)
     'CREATE_VERIFICATION_FIGURES': True  # Create verification figures
@@ -38,6 +42,16 @@ def parse_arguments():
                         help='Normalize frames (true/false)')
     parser.add_argument('--normalization-scale', type=float,
                         help='Scaling factor after normalization (default: 1.0)')
+    parser.add_argument('--normalization-method', type=str, choices=['max', 'percentile'],
+                        help="Reference value for normalization: 'max' (brightest pixel) "
+                             "or 'percentile' (robust to hot pixels)")
+    parser.add_argument('--normalization-percentile', type=float,
+                        help='Percentile used when --normalization-method=percentile (default: 99.9)')
+    parser.add_argument('--normalization-region', type=str, choices=['frame', 'mask'],
+                        help="Compute the reference over the whole 'frame' or only 'mask' (in-cell) pixels")
+    parser.add_argument('--normalization-scope', type=str, choices=['per_frame', 'global'],
+                        help="Normalize each frame to its own reference ('per_frame') or "
+                             "the whole stack to one reference ('global')")
     parser.add_argument('--subtract-background', type=lambda x: x.lower() == 'true',
                         help='Subtract background before normalization (true/false)')
     parser.add_argument('--background-percentile', type=float,
@@ -58,6 +72,14 @@ def parse_arguments():
         CONFIG['NORMALIZE_FRAMES'] = args.normalize_frames
     if args.normalization_scale is not None:
         CONFIG['NORMALIZATION_SCALE'] = args.normalization_scale
+    if args.normalization_method is not None:
+        CONFIG['NORMALIZATION_METHOD'] = args.normalization_method
+    if args.normalization_percentile is not None:
+        CONFIG['NORMALIZATION_PERCENTILE'] = args.normalization_percentile
+    if args.normalization_region is not None:
+        CONFIG['NORMALIZATION_REGION'] = args.normalization_region
+    if args.normalization_scope is not None:
+        CONFIG['NORMALIZATION_SCOPE'] = args.normalization_scope
     if args.subtract_background is not None:
         CONFIG['SUBTRACT_BACKGROUND'] = args.subtract_background
     if args.background_percentile is not None:
@@ -153,35 +175,93 @@ def subtract_background(images):
 
     return images_bg_subtracted
 
-def normalize_frames(images):
-    """Normalize each frame to its brightest pixel value and apply scaling.
+def _compute_reference(values, method, percentile):
+    """Compute the normalization reference (denominator) from pixel values.
+
+    'max' uses the brightest pixel; 'percentile' uses the given percentile,
+    which is robust to single hot pixels / saturated spots.
+    """
+    values = np.asarray(values)
+    if values.size == 0:
+        return 0.0
+    if method == 'percentile':
+        return float(np.percentile(values, percentile))
+    return float(values.max())
+
+
+def normalize_frames(images, masks=None):
+    """Normalize frames to a reference value and apply scaling.
+
+    The reference value (what gets mapped to NORMALIZATION_SCALE) is controlled
+    by three orthogonal options:
+
+    - method ('max' | 'percentile'): brightest pixel, or a robust percentile
+      that ignores a handful of hot pixels.
+    - region ('frame' | 'mask'): compute the reference over the whole image, or
+      only over pixels inside the cell mask (ignores bright debris outside).
+    - scope ('per_frame' | 'global'): normalize each frame to its own reference,
+      or normalize the whole stack to a single reference (consistent frame-to-frame).
 
     Args:
         images: 3D numpy array (n_frames, height, width)
+        masks: optional 3D binary mask array; required for region='mask'
 
     Returns:
-        Normalized images as float32 in range [0, NORMALIZATION_SCALE]
+        Normalized images as float32, typically in range [0, NORMALIZATION_SCALE]
     """
-    print("Normalizing frames to brightest pixel...")
+    method = CONFIG['NORMALIZATION_METHOD']
+    percentile = CONFIG['NORMALIZATION_PERCENTILE']
+    region = CONFIG['NORMALIZATION_REGION']
+    scope = CONFIG['NORMALIZATION_SCOPE']
+    scale = CONFIG['NORMALIZATION_SCALE']
+
+    use_mask = (region == 'mask' and masks is not None)
+    if region == 'mask' and masks is None:
+        print("Warning: region='mask' requested but no masks provided; using whole frame")
+
+    ref_desc = 'max' if method == 'max' else f'{percentile:g}th percentile'
+    print(f"Normalizing frames ({scope}, {'in-mask' if use_mask else 'whole-frame'} {ref_desc})...")
 
     # Convert to float to preserve precision
     images_normalized = images.astype(np.float32)
 
-    # Normalize each frame independently
-    for i in range(images_normalized.shape[0]):
-        frame_max = images_normalized[i].max()
-        if frame_max > 0:  # Avoid division by zero
-            images_normalized[i] = images_normalized[i] / frame_max
+    def frame_values(idx):
+        if use_mask:
+            selected = masks[idx] > 0
+            if np.any(selected):
+                return images_normalized[idx][selected]
+            print(f"Warning: frame {idx} mask is empty; using whole frame")
+        return images_normalized[idx].ravel()
+
+    if scope in ('global', 'stack'):
+        # One reference computed across the entire stack
+        if use_mask and np.any(masks > 0):
+            values = images_normalized[masks > 0]
         else:
-            print(f"Warning: Frame {i} has max value of 0, skipping normalization")
+            if use_mask:
+                print("Warning: all masks empty; using whole stack")
+            values = images_normalized
+        reference = _compute_reference(values, method, percentile)
+        if reference > 0:
+            images_normalized = images_normalized / reference
+            print(f"  Global reference value: {reference:.4f}")
+        else:
+            print("Warning: global reference is 0, skipping normalization")
+    else:  # per_frame
+        for i in range(images_normalized.shape[0]):
+            reference = _compute_reference(frame_values(i), method, percentile)
+            if reference > 0:  # Avoid division by zero
+                images_normalized[i] = images_normalized[i] / reference
+            else:
+                print(f"Warning: Frame {i} reference is 0, skipping normalization")
 
     # Apply scaling factor
-    if CONFIG['NORMALIZATION_SCALE'] != 1.0:
-        print(f"Applying normalization scale factor: {CONFIG['NORMALIZATION_SCALE']}")
-        images_normalized = images_normalized * CONFIG['NORMALIZATION_SCALE']
-        print(f"Normalized {images_normalized.shape[0]} frames to range [0, {CONFIG['NORMALIZATION_SCALE']}]")
+    if scale != 1.0:
+        print(f"Applying normalization scale factor: {scale}")
+        images_normalized = images_normalized * scale
+        print(f"Normalized {images_normalized.shape[0]} frames to ~[0, {scale}]")
     else:
-        print(f"Normalized {images_normalized.shape[0]} frames to range [0, 1]")
+        print(f"Normalized {images_normalized.shape[0]} frames to ~[0, 1]")
 
     return images_normalized
 
@@ -202,6 +282,10 @@ def save_data_and_metadata(images, masks, output_dir):
         'mask_dtype': str(masks.dtype),
         'normalized': CONFIG['NORMALIZE_FRAMES'],
         'normalization_scale': CONFIG['NORMALIZATION_SCALE'],
+        'normalization_method': CONFIG['NORMALIZATION_METHOD'],
+        'normalization_percentile': CONFIG['NORMALIZATION_PERCENTILE'],
+        'normalization_region': CONFIG['NORMALIZATION_REGION'],
+        'normalization_scope': CONFIG['NORMALIZATION_SCOPE'],
         'background_subtracted': CONFIG['SUBTRACT_BACKGROUND'],
         'background_percentile': CONFIG['BACKGROUND_PERCENTILE'] if CONFIG['SUBTRACT_BACKGROUND'] else None
     }
@@ -259,9 +343,9 @@ def main():
     if CONFIG['SUBTRACT_BACKGROUND']:
         images = subtract_background(images)
 
-    # Normalize frames if requested
+    # Normalize frames if requested (masks enable region='mask' normalization)
     if CONFIG['NORMALIZE_FRAMES']:
-        images = normalize_frames(images)
+        images = normalize_frames(images, masks)
 
     # Save data
     save_data_and_metadata(images, masks, CONFIG['OUTPUT_DIR'])

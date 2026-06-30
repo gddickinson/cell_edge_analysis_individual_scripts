@@ -14,6 +14,8 @@ import pickle
 import json
 from scipy import stats
 
+from intensity_labels import load_intensity_label, DEFAULT_LABEL
+
 # Configuration
 CONFIG = {
     'INPUT_DIR_STEP4': "step4_results",
@@ -202,7 +204,8 @@ def save_analysis_results(correlation_results, classifications, combined_data, o
 
     print(f"Saved analysis results to {output_dir}")
 
-def create_final_figures(combined_data, correlation_results, classifications, output_dir):
+def create_final_figures(combined_data, correlation_results, classifications, output_dir,
+                         intensity_label=DEFAULT_LABEL):
     """Create comprehensive final figures."""
     print("Creating final figures...")
 
@@ -254,7 +257,7 @@ def create_final_figures(combined_data, correlation_results, classifications, ou
     ax_main.axvline(x=0, color='k', linestyle='-', linewidth=1, alpha=0.3)
 
     ax_main.set_xlabel('Displacement (pixels)', fontsize=12)
-    ax_main.set_ylabel('PIEZO1 Intensity', fontsize=12)
+    ax_main.set_ylabel(intensity_label, fontsize=12)
     ax_main.set_title(f'Movement vs Intensity Correlation (n={len(all_valid)} points)', fontsize=14)
     ax_main.legend()
     ax_main.grid(True, alpha=0.3)
@@ -314,7 +317,7 @@ def create_final_figures(combined_data, correlation_results, classifications, ou
 
     ax_top_right.set_xticks(x_positions)
     ax_top_right.set_xticklabels(mean_plot_labels)
-    ax_top_right.set_ylabel('PIEZO1 Intensity')
+    ax_top_right.set_ylabel(intensity_label)
     ax_top_right.set_title('Mean Intensity\n(±SD)', fontsize=10)
     ax_top_right.grid(True, alpha=0.3, axis='y')
 
@@ -363,7 +366,7 @@ def create_final_figures(combined_data, correlation_results, classifications, ou
         ax_right.text(i, y_pos, text_str, ha='center', va='top',
                      fontsize=8, bbox=dict(boxstyle='round', facecolor='white', alpha=0.7))
 
-    ax_right.set_ylabel('PIEZO1 Intensity')
+    ax_right.set_ylabel(intensity_label)
     ax_right.set_title('Intensity by\nMovement Type')
     ax_right.grid(True, alpha=0.3, axis='y')
 
@@ -432,7 +435,7 @@ def create_final_figures(combined_data, correlation_results, classifications, ou
     axes[0, 1].hist(intensities, bins=40, edgecolor='black', alpha=0.7, color='coral')
     axes[0, 1].axvline(x=np.mean(intensities), color='r', linestyle='--', linewidth=2, label='Mean')
     axes[0, 1].axvline(x=np.median(intensities), color='g', linestyle='--', linewidth=2, label='Median')
-    axes[0, 1].set_xlabel('PIEZO1 Intensity')
+    axes[0, 1].set_xlabel(intensity_label)
     axes[0, 1].set_ylabel('Count')
     axes[0, 1].set_title('Overall Intensity Distribution')
     axes[0, 1].legend()
@@ -459,7 +462,8 @@ def create_final_figures(combined_data, correlation_results, classifications, ou
         stats_text = "FINAL ANALYSIS SUMMARY\n"
         stats_text += "="*40 + "\n\n"
         stats_text += f"Sample Size: {correlation_results['n_points']} valid points\n"
-        stats_text += f"Frames: {len(combined_data)}\n\n"
+        stats_text += f"Frames: {len(combined_data)}\n"
+        stats_text += f"Intensity metric: {intensity_label}\n\n"
 
         stats_text += "CORRELATION:\n"
         stats_text += f"  Pearson r: {correlation_results['overall']['pearson_r']:.4f}\n"
@@ -499,6 +503,10 @@ def main():
     # Load previous results
     classifications, combined_data = load_previous_results()
 
+    # Propagate the intensity axis label produced upstream (step 7 -> step 8)
+    intensity_label = load_intensity_label(
+        CONFIG['INPUT_DIR_STEP8'], 'combined_statistics.json')
+
     # Perform correlation analysis
     correlation_results = perform_correlation_analysis(combined_data)
 
@@ -508,7 +516,7 @@ def main():
 
     # Create final figures
     create_final_figures(combined_data, correlation_results, classifications,
-                        CONFIG['OUTPUT_DIR'])
+                        CONFIG['OUTPUT_DIR'], intensity_label)
 
     print("\n" + "="*60)
     print("STEP 9 COMPLETE - ANALYSIS FINISHED")

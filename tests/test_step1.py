@@ -127,5 +127,70 @@ class TestStep1Preprocessing:
         assert result[0].max() == 0
 
 
+class TestStep1NormalizationOptions:
+    """Tests for the configurable normalization reference/region/scope."""
+
+    def _reset(self, step1):
+        step1.CONFIG['NORMALIZATION_SCALE'] = 100.0
+        step1.CONFIG['NORMALIZATION_METHOD'] = 'max'
+        step1.CONFIG['NORMALIZATION_PERCENTILE'] = 99.9
+        step1.CONFIG['NORMALIZATION_REGION'] = 'frame'
+        step1.CONFIG['NORMALIZATION_SCOPE'] = 'per_frame'
+
+    def test_percentile_reference_ignores_hot_pixel(self):
+        """A single hot pixel should NOT set the 100 ceiling under percentile norm."""
+        import step1_data_loading as step1
+        self._reset(step1)
+
+        images = np.ones((1, 50, 50), dtype=np.float32) * 10.0
+        images[0, 0, 0] = 10000.0  # hot pixel
+
+        # Under 'max', the dim bulk is crushed far below the scale...
+        step1.CONFIG['NORMALIZATION_METHOD'] = 'max'
+        max_norm = step1.normalize_frames(images.copy())
+        assert max_norm[0, 25, 25] < 1.0
+
+        # ...under 'percentile' the hot pixel is ignored, bulk maps near the scale.
+        step1.CONFIG['NORMALIZATION_METHOD'] = 'percentile'
+        step1.CONFIG['NORMALIZATION_PERCENTILE'] = 99.0
+        pct_norm = step1.normalize_frames(images.copy())
+        assert pct_norm[0, 25, 25] > 50.0
+        self._reset(step1)
+
+    def test_global_scope_is_consistent_across_frames(self):
+        """Global scope applies one reference, preserving frame-to-frame ratios."""
+        import step1_data_loading as step1
+        self._reset(step1)
+        step1.CONFIG['NORMALIZATION_SCOPE'] = 'global'
+        step1.CONFIG['NORMALIZATION_SCALE'] = 1.0
+
+        images = np.ones((2, 10, 10), dtype=np.float32)
+        images[0] *= 50.0
+        images[1] *= 100.0  # brightest frame defines the global reference
+
+        result = step1.normalize_frames(images)
+        # Dim frame stays at half the bright frame (ratio preserved), not renormalized to 1.
+        assert np.isclose(result[1].max(), 1.0)
+        assert np.isclose(result[0].max(), 0.5)
+        self._reset(step1)
+
+    def test_mask_region_uses_in_cell_pixels(self):
+        """region='mask' ignores bright pixels outside the cell mask."""
+        import step1_data_loading as step1
+        self._reset(step1)
+        step1.CONFIG['NORMALIZATION_REGION'] = 'mask'
+        step1.CONFIG['NORMALIZATION_SCALE'] = 1.0
+
+        images = np.ones((1, 10, 10), dtype=np.float32) * 5.0
+        images[0, 0, 0] = 1000.0  # very bright pixel OUTSIDE the mask
+        masks = np.zeros((1, 10, 10), dtype=np.uint8)
+        masks[0, 5:, 5:] = 1  # mask excludes the bright corner
+
+        result = step1.normalize_frames(images, masks)
+        # In-cell reference is 5.0, so in-cell pixels map to ~1.0 despite the bright corner.
+        assert np.isclose(result[0, 7, 7], 1.0)
+        self._reset(step1)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

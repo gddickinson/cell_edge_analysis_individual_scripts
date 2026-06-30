@@ -30,6 +30,10 @@ PIPELINE_CONFIG = {
     'step1': {
         'normalize_frames': True,
         'normalization_scale': 100.0,  # Scaling factor after normalization
+        'normalization_method': 'max',        # 'max' or 'percentile' (robust to hot pixels)
+        'normalization_percentile': 99.9,     # used when normalization_method='percentile'
+        'normalization_region': 'frame',      # 'frame' (whole image) or 'mask' (in-cell only)
+        'normalization_scope': 'per_frame',   # 'per_frame' or 'global' (one ref for the stack)
         'subtract_background': True,  # Subtract background before normalization
         'background_percentile': 10,  # Percentile for background (0-100)
         'create_verification_figures': True
@@ -87,6 +91,8 @@ PIPELINE_CONFIG = {
     # Step 7: Intensity Extraction
     'step7': {
         'show_edge': True,
+        'intensity_statistic': 'mean',   # 'mean', 'max' or 'percentile' per sampling rectangle
+        'intensity_percentile': 95,      # used when intensity_statistic='percentile'
         'create_verification_figures': True
     },
 

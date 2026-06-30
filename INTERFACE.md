@@ -20,8 +20,27 @@
 |------|---------|
 | `run_all_steps.py` | Master script: runs all 9 steps sequentially or in batch |
 | `config.py` | **Shared** pipeline configuration (centralized `PIPELINE_CONFIG`) |
+| `intensity_labels.py` | Builds self-describing intensity axis labels from the normalization (step 1) and per-rectangle statistic (step 7) choices; label is threaded step7→step8→step9 |
 | `combined_batch_analysis.py` | Cross-dataset correlation analysis |
 | `summarize_batch_results.py` | Summary statistics from batch runs |
+
+## Intensity normalization & aggregation options
+
+The plotted PIEZO1 intensity depends on two independent sets of choices, all
+surfaced as CLI args (and in the GUI / `PIPELINE_CONFIG`). Defaults reproduce the
+original behaviour exactly.
+
+| Stage | Option | Values (default first) | Effect |
+|-------|--------|------------------------|--------|
+| step1 | `--normalization-method` | `max`, `percentile` | What value maps to the scale; `percentile` is robust to hot pixels |
+| step1 | `--normalization-percentile` | `99.9` | Percentile used when method=`percentile` |
+| step1 | `--normalization-region` | `frame`, `mask` | Reference over the whole frame or only in-cell pixels |
+| step1 | `--normalization-scope` | `per_frame`, `global` | Per-frame reference, or one stack-wide reference (frame-to-frame consistent) |
+| step7 | `--intensity-statistic` | `mean`, `max`, `percentile` | How pixels inside each sampling rectangle are aggregated |
+| step7 | `--intensity-percentile` | `95` | Percentile used when statistic=`percentile` |
+
+All figure axis labels/titles (step7, step8, step9, and the GUI) reflect the
+chosen options, e.g. `PIEZO1 intensity (mean, % of per-frame max)`.
 
 ## GUI
 
@@ -29,6 +48,13 @@
 |------|---------|
 | `cell_edge_analysis_gui.py` | Tkinter GUI for interactive pipeline execution |
 | `launch_gui.py` | Thin launcher with dependency checks |
+| `gui_help_content.py` | Help text (one section per step + math, defaults, conventions); pure data |
+| `gui_help.py` | Builds the **Help → Analysis Guide** window from `gui_help_content` |
+| `gui_tooltips.py` | `ToolTip` hover widget + `TOOLTIPS` text + `attach()` helper used across the GUI |
+
+The GUI has a **Help menu** (Analysis Guide + About), hover **tooltips** on the
+main controls, and **Robust / Default normalization preset** buttons on the
+Step 1 panel (Robust = percentile 99.9 / in-mask / global).
 
 ## Tests
 

@@ -1,150 +1,121 @@
 ╔════════════════════════════════════════════════════════════════╗
-║      CELL EDGE MOVEMENT ANALYSIS GUI - QUICK REFERENCE         ║
+║   CELL EDGE MOVEMENT ANALYSIS GUI - QUICK REFERENCE            ║
 ╚════════════════════════════════════════════════════════════════╝
 
 ┌─ LAUNCHING ────────────────────────────────────────────────────┐
 │ python launch_gui.py                                           │
-│ or: python cell_edge_analysis_gui.py                          │
+│ or: python cell_edge_analysis_gui.py                           │
 └────────────────────────────────────────────────────────────────┘
 
 ┌─ WORKFLOW ─────────────────────────────────────────────────────┐
 │ 1. Setup & Run Tab:                                            │
-│    ├─ Browse → Select Image Stack (PIEZO1)                    │
-│    ├─ Browse → Select Mask Stack                              │
-│    ├─ Configure parameters (or use defaults)                  │
-│    └─ Run All Steps (or Run Selected Step)                    │
-│                                                                 │
-│ 2. Results Viewer Tab:                                         │
-│    ├─ Select view type from dropdown                          │
-│    ├─ Navigate: ◄◄ ◄ ► ►►                                    │
-│    └─ Update View to refresh                                  │
-│                                                                 │
-│ 3. Statistics Tab:                                             │
-│    └─ Review comprehensive analysis statistics                │
+│    - Browse -> Select Image Stack (PIEZO1)                     │
+│    - Browse -> Select Mask Stack                               │
+│    - Configure parameters (or use defaults / presets)          │
+│    - Run All Steps (or Run Selected Step)                      │
+│ 2. Results Viewer / Statistics / Correlation Analysis tabs     │
+│ 3. Help -> Analysis Guide = steps, math & settings             │
+│    (hover any control for a tooltip)                           │
 └────────────────────────────────────────────────────────────────┘
 
 ┌─ KEY PARAMETERS ───────────────────────────────────────────────┐
-│                                                                 │
 │ STEP 1 - Data Loading                                          │
-│   • Normalize Frames: ON (recommended)                         │
-│   • Normalization Scale: 100.0                                 │
-│   • Subtract Background: ON (recommended)                      │
-│   • Background Percentile: 10.0                                │
-│                                                                 │
+│   - Normalize Frames: ON     Scale: 100.0                      │
+│   - Norm Reference: max | percentile (robust to hot px)        │
+│   - Norm Percentile: 99.9    (used if reference=percentile)    │
+│   - Norm Region: frame | mask (mask = in-cell only)            │
+│   - Norm Scope: per_frame | global (global=time-consistent)    │
+│   - Subtract Background: ON   Percentile: 10                   │
+│   - [Robust preset] / [Default preset] buttons                 │
+│                                                                │
 │ STEP 2 - Edge Detection                                        │
-│   • Smooth Edges: ON (recommended)                             │
-│   • Smoothing Sigma: 20.0 (range: 10-40)                      │
-│     └─ Increase for noisy edges (30-40)                       │
-│     └─ Decrease for fine features (10-15)                     │
-│                                                                 │
+│   - Smooth Edges: ON   Smoothing Sigma: 20.0 (10-40)           │
+│                                                                │
 │ STEP 3 - Displacement                                          │
-│   • Min Movement Pixels: 5                                     │
-│   • Arrow Scale: 1.0                                           │
-│                                                                 │
+│   - Min Movement Pixels: 5     Arrow Scale: 1.0                │
+│                                                                │
 │ STEP 4 - Classification                                        │
-│   • Movement Threshold: 5.0 pixels                             │
-│     └─ Increase for faster cells (7-10)                       │
-│     └─ Decrease for subtle movement (2-3)                     │
-│                                                                 │
+│   - Movement Threshold: 5.0 px (must match Step 9)             │
+│                                                                │
 │ STEP 5 - Sampling                                              │
-│   • Method: "displacement" (recommended)                       │
-│   • Displacement Threshold: 5.0                                │
-│   • Number of Samples: 10                                      │
-│                                                                 │
+│   - Method: displacement_like | fixed_x | dense | per_frame    │
+│   - Number of Points: 10   Target Points (disp): ~20           │
+│                                                                │
+│ STEP 7 - Intensity                                             │
+│   - Intensity Statistic: mean | max | percentile               │
+│   - Intensity Percentile: 95  (if statistic=percentile)        │
 └────────────────────────────────────────────────────────────────┘
 
-┌─ VISUALIZATION MODES ──────────────────────────────────────────┐
-│ • Overview       → Image, mask, edge overlay                   │
-│ • Edge Detection → Edges on image and mask                     │
-│ • Displacement   → Displacement maps + statistics              │
-│ • Classification → Movement type (extruding/retracting/stable) │
-│ • Sampling       → Sampling rectangle locations                │
-│ • Intensity      → PIEZO1 intensity values                     │
-│ • Correlation    → Intensity vs movement correlation           │
+┌─ NORMALIZATION: WHY VALUES CAN LOOK LOW ───────────────────────┐
+│ Default = each frame / its single brightest pixel, so one      │
+│ hot pixel sets '100' and edge MEANS read low (e.g. 2-14).      │
+│ ROBUST preset: percentile 99.9 / in-mask / global = a          │
+│ stable, cell-based, frame-to-frame-consistent reference.       │
+│ (Numbers then differ from default-preset runs.)                │
+│ Plot axes state what was used, e.g.                            │
+│   PIEZO1 intensity (mean, % of per-frame max)                  │
+└────────────────────────────────────────────────────────────────┘
+
+┌─ VISUALIZATION MODES (Results Viewer) ─────────────────────────┐
+│ Overview       -> Image, mask, edge overlay                    │
+│ Edge Detection -> Edges on image and mask                      │
+│ Displacement   -> Displacement maps + statistics               │
+│ Classification -> extruding / retracting / stable              │
+│ Sampling       -> Sampling rectangle locations                 │
+│ Intensity      -> PIEZO1 values (axis labelled w/ method)      │
+│ Correlation    -> in the separate Correlation Analysis tab     │
 └────────────────────────────────────────────────────────────────┘
 
 ┌─ NAVIGATION ───────────────────────────────────────────────────┐
-│ ◄◄  First frame     ◄  Previous frame                         │
-│ ►   Next frame      ►►  Last frame                            │
+│ |<  First frame     <  Previous frame                          │
+│ >   Next frame      >|  Last frame                             │
 └────────────────────────────────────────────────────────────────┘
 
 ┌─ MOVEMENT CLASSIFICATION ──────────────────────────────────────┐
-│ EXTRUDING  → Edge moving UP/OUT (negative displacement) [BLUE] │
-│ RETRACTING → Edge moving DOWN/IN (positive displacement) [RED] │
-│ STABLE     → Minimal edge movement [GRAY]                      │
+│ EXTRUDING  -> Edge UP/OUT (negative displacement) [BLUE]       │
+│ RETRACTING -> Edge DOWN/IN (positive displacement) [RED]       │
+│ STABLE     -> Minimal edge movement [GRAY]                     │
+└────────────────────────────────────────────────────────────────┘
+
+┌─ HELP & TOOLTIPS ──────────────────────────────────────────────┐
+│ Help -> Analysis Guide : per-step purpose, math, defaults,     │
+│   how to change them, sign conventions & glossary.             │
+│ Help -> About          : version info.                         │
+│ Tooltips: hover file pickers, run buttons, step selector,      │
+│   Step 1 & Step 7 params, presets, viewer selectors.           │
 └────────────────────────────────────────────────────────────────┘
 
 ┌─ OUTPUT FILES ─────────────────────────────────────────────────┐
 │ analysis_results/                                              │
-│ ├── step1_results/                                             │
-│ │   ├── images.npy            (preprocessed images)           │
-│ │   ├── masks.npy             (binary masks)                  │
-│ │   └── verification_figures/ (QC plots)                      │
-│ ├── step2_results/                                             │
-│ │   ├── edges.pkl             (edge coordinates)              │
-│ │   └── verification_figures/                                 │
-│ ├── step3_results/                                             │
-│ │   ├── displacement_data.pkl (displacement maps)             │
-│ │   └── verification_figures/                                 │
-│ └── ... (continues for all 9 steps)                           │
+│  step1_results/  images.npy, masks.npy, metadata.json          │
+│  step2_results/  edges.pkl                                     │
+│  step3_results/  displacement_data.pkl                         │
+│  ... step9_results/  correlation_results + scatter_plot.png    │
+│  each stepN_results/ has a verification_figures/ folder        │
 └────────────────────────────────────────────────────────────────┘
 
 ┌─ TROUBLESHOOTING ──────────────────────────────────────────────┐
-│                                                                 │
-│ GUI won't start:                                               │
-│ └─ Check Python version: python3 --version (need 3.6+)       │
-│ └─ Install dependencies: pip install -r requirements.txt      │
-│ └─ Linux: sudo apt-get install python3-tk                     │
-│                                                                 │
-│ Analysis fails:                                                │
-│ └─ Check Analysis Log for details                            │
-│ └─ Verify TIFF files are valid                               │
-│ └─ Ensure masks match image dimensions                        │
-│ └─ Try running steps individually                             │
-│                                                                 │
-│ "No valid displacements":                                      │
-│ └─ Check edge detection quality                               │
-│ └─ Increase smoothing sigma (30-40)                          │
-│ └─ Verify mask quality                                        │
-│                                                                 │
-│ Poor edge detection:                                           │
-│ └─ Adjust smoothing sigma                                     │
-│ └─ Check background subtraction                               │
-│ └─ Review step1 verification figures                          │
-│                                                                 │
-└────────────────────────────────────────────────────────────────┘
-
-┌─ TIPS ─────────────────────────────────────────────────────────┐
-│ • Always review verification figures for quality control       │
-│ • Monitor Analysis Log during execution                        │
-│ • Use defaults first, then optimize parameters                │
-│ • Save different parameter sets for different datasets        │
-│ • Each step creates verification_figures/ subdirectory         │
+│ GUI won't start: need Python 3.7+ with Tkinter                 │
+│   pip install -r requirements.txt (Linux: python3-tk)          │
+│ Analysis fails: check Log; verify TIFFs; match dims            │
+│ 'No valid displacements': check edges; raise sigma             │
+│ Intensities look low: use the Robust preset (Step 1)           │
 └────────────────────────────────────────────────────────────────┘
 
 ┌─ COMMAND-LINE ALTERNATIVE ─────────────────────────────────────┐
-│ python run_all_steps.py                    (run all steps)     │
-│ python step1_data_loading.py --help        (see options)       │
+│ python run_all_steps.py --batch       (all datasets)           │
+│ python step1_data_loading.py --help   (all options)            │
+│ Robust norm (step1): --normalization-method percentile         │
+│   --normalization-region mask --normalization-scope global     │
+│ Bright puncta (step7): --intensity-statistic max               │
 └────────────────────────────────────────────────────────────────┘
 
 ┌─ RECOMMENDED IMAGE SPECS ──────────────────────────────────────┐
-│ • Format: Multi-frame TIFF                                     │
-│ • Bit depth: 8-bit or 16-bit grayscale                        │
-│ • Size: 256x256 to 2048x2048 pixels typical                  │
-│ • Frames: Image and mask stacks must match                    │
-└────────────────────────────────────────────────────────────────┘
-
-┌─ MEMORY & PERFORMANCE ─────────────────────────────────────────┐
-│ • Analysis runs in background thread (GUI stays responsive)    │
-│ • Memory usage scales with image size × number of frames      │
-│ • Steps 1-4: Fast (seconds to minutes)                        │
-│ • Steps 5-9: Slower (minutes, depends on sampling)            │
-│ • Monitor progress in Analysis Log                            │
+│ Multi-frame TIFF, 8/16-bit grayscale                           │
+│ Image and mask stacks must match in size & frame count         │
 └────────────────────────────────────────────────────────────────┘
 
 ╔════════════════════════════════════════════════════════════════╗
-║ For detailed help, see: GUI_USER_GUIDE.md                     ║
-║ For analysis details, see: README.md                          ║
+║  Detailed help: GUI_USER_GUIDE.md  |  Analysis: README.md      ║
+║  In-app: Help -> Analysis Guide    |  Version 2.0              ║
 ╚════════════════════════════════════════════════════════════════╝
-
-Version 1.0 | Print this reference for quick access

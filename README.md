@@ -189,14 +189,14 @@ PIPELINE_CONFIG = {
         'normalize_frames': True,           # Normalize intensity
         'subtract_background': True,        # Remove background (recommended)
         'background_percentile': 10,        # Background level (0-100)
-        'normalization_scale': 1.0,         # Scaling factor
+        'normalization_scale': 100.0,       # Scaling factor (reference maps to this)
         'create_verification_figures': True # Quality control images
     },
 
     # Step 2: Edge Detection
     'step2': {
         'smooth_edges': True,               # Smooth noisy edges (recommended)
-        'smoothing_sigma': 2.0,             # Smoothing strength (1-3)
+        'smoothing_sigma': 20.0,            # Smoothing strength (typical 10-40)
         'create_verification_figures': True
     },
 
@@ -521,7 +521,8 @@ ls results/test_1/*/verification_figures/
 }
 ```
 
-See `STEP1_ENHANCEMENTS.md` for detailed guide.
+See the "Normalization Reference & Intensity Statistic" section above, or the
+in-app **Help → Analysis Guide** (Step 1 section), for a detailed guide.
 
 ### Edge Smoothing (New in v2.3.0)
 
@@ -539,7 +540,38 @@ See `STEP1_ENHANCEMENTS.md` for detailed guide.
 }
 ```
 
-See `STEP2_ENHANCEMENTS.md` for detailed guide.
+See the in-app **Help → Analysis Guide** (Step 2 section) for a detailed guide.
+
+### Normalization Reference & Intensity Statistic
+
+By default each frame is normalized so its **single brightest pixel** maps to the
+scale (e.g. 100), and each sampling rectangle reports its **mean** intensity. A
+lone hot pixel can therefore push typical edge values far down the scale. Several
+options let you choose a more robust reference and a different per-rectangle
+statistic. **Defaults reproduce the original behaviour**, and every plot's axis
+label states the choice, e.g. `PIEZO1 intensity (mean, % of per-frame max)`.
+
+```bash
+# Robust, frame-to-frame-consistent normalization (in-mask 99.9th percentile,
+# computed once across the whole stack) + brightest-pixel-per-rectangle readout
+python step1_data_loading.py ... \
+    --normalization-method percentile --normalization-percentile 99.9 \
+    --normalization-region mask --normalization-scope global
+
+python step7_intensity_extraction.py ... --intensity-statistic max
+```
+
+| Stage | Option | Values (default first) |
+|-------|--------|------------------------|
+| step1 | `--normalization-method` | `max`, `percentile` |
+| step1 | `--normalization-percentile` | `99.9` |
+| step1 | `--normalization-region` | `frame`, `mask` |
+| step1 | `--normalization-scope` | `per_frame`, `global` |
+| step7 | `--intensity-statistic` | `mean`, `max`, `percentile` |
+| step7 | `--intensity-percentile` | `95` |
+
+In the GUI these appear under **Configure Step → Step 1** (normalization) and
+**Step 7** (intensity statistic); batch runs read them from `PIPELINE_CONFIG`.
 
 ### Combined Analysis
 

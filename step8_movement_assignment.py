@@ -13,6 +13,8 @@ import matplotlib.pyplot as plt
 import pickle
 import json
 
+from intensity_labels import load_intensity_label, DEFAULT_LABEL
+
 # Configuration
 CONFIG = {
     'INPUT_DIR_STEP3': "step3_results",
@@ -142,7 +144,7 @@ def assign_all_movements(displacement_data, intensity_data, temporal_direction):
 
     return combined_data
 
-def save_combined_data(combined_data, output_dir):
+def save_combined_data(combined_data, output_dir, intensity_label=DEFAULT_LABEL):
     """Save combined movement-intensity data."""
     os.makedirs(output_dir, exist_ok=True)
 
@@ -162,7 +164,8 @@ def save_combined_data(combined_data, output_dir):
         'total_points': len(all_points),
         'valid_points': len(valid_points),
         'invalid_points': len(all_points) - len(valid_points),
-        'temporal_direction': CONFIG['temporal_direction']
+        'temporal_direction': CONFIG['temporal_direction'],
+        'intensity_label': intensity_label
     }
 
     if valid_points:
@@ -177,7 +180,7 @@ def save_combined_data(combined_data, output_dir):
     print(f"Saved combined data to {output_dir}")
     print(f"  Valid points: {len(valid_points)}/{len(all_points)}")
 
-def create_verification_figures(combined_data, output_dir):
+def create_verification_figures(combined_data, output_dir, intensity_label=DEFAULT_LABEL):
     """Create verification figures showing movement-intensity pairs."""
     print("Creating verification figures...")
 
@@ -227,7 +230,7 @@ def create_verification_figures(combined_data, output_dir):
                                      c=intensities, cmap='viridis',
                                      s=100, edgecolors='black', linewidth=1)
         axes[0, 1].set_xlabel('X Position (pixels)')
-        axes[0, 1].set_ylabel('Intensity')
+        axes[0, 1].set_ylabel(intensity_label)
         axes[0, 1].set_title(f'Frame {frame_idx}: Intensity vs X-Position')
         axes[0, 1].grid(True, alpha=0.3)
         plt.colorbar(scatter2, ax=axes[0, 1], label='Intensity')
@@ -239,7 +242,7 @@ def create_verification_figures(combined_data, output_dir):
                                      vmin=-2, vmax=2, alpha=0.6)
         axes[1, 0].axvline(x=0, color='k', linestyle='--', linewidth=1)
         axes[1, 0].set_xlabel('Displacement (pixels)')
-        axes[1, 0].set_ylabel('Intensity')
+        axes[1, 0].set_ylabel(intensity_label)
         axes[1, 0].set_title('Intensity vs Displacement')
         axes[1, 0].grid(True, alpha=0.3)
         plt.colorbar(scatter3, ax=axes[1, 0], label='Displacement')
@@ -287,7 +290,7 @@ def create_verification_figures(combined_data, output_dir):
                                     vmin=-2, vmax=2)
         axes[0, 0].axvline(x=0, color='k', linestyle='--', linewidth=1)
         axes[0, 0].set_xlabel('Displacement (pixels)')
-        axes[0, 0].set_ylabel('Intensity')
+        axes[0, 0].set_ylabel(intensity_label)
         axes[0, 0].set_title(f'All Data: Intensity vs Displacement\nn={len(all_valid)} points')
         axes[0, 0].grid(True, alpha=0.3)
         plt.colorbar(scatter, ax=axes[0, 0], label='Displacement')
@@ -314,7 +317,7 @@ def create_verification_figures(combined_data, output_dir):
         axes[1, 0].hist(all_intensities, bins=30, edgecolor='black', alpha=0.7, color='skyblue')
         axes[1, 0].axvline(x=np.mean(all_intensities), color='r',
                           linestyle='--', linewidth=2, label='Mean')
-        axes[1, 0].set_xlabel('Intensity')
+        axes[1, 0].set_xlabel(intensity_label)
         axes[1, 0].set_ylabel('Count')
         axes[1, 0].set_title('Intensity Distribution')
         axes[1, 0].legend()
@@ -361,16 +364,20 @@ def main():
     # Load previous results
     displacement_data, intensity_data = load_previous_results()
 
+    # Propagate the intensity axis label produced by step 7
+    intensity_label = load_intensity_label(
+        CONFIG['INPUT_DIR_STEP7'], 'intensity_statistics.json')
+
     # Assign movements to intensities
     combined_data = assign_all_movements(displacement_data, intensity_data,
                                         CONFIG['temporal_direction'])
 
     # Save combined data
-    save_combined_data(combined_data, CONFIG['OUTPUT_DIR'])
+    save_combined_data(combined_data, CONFIG['OUTPUT_DIR'], intensity_label)
 
     # Create verification figures if requested
     if CONFIG['CREATE_VERIFICATION_FIGURES']:
-        create_verification_figures(combined_data, CONFIG['OUTPUT_DIR'])
+        create_verification_figures(combined_data, CONFIG['OUTPUT_DIR'], intensity_label)
     else:
         print("Skipping verification figures (CREATE_VERIFICATION_FIGURES=False)")
 

@@ -9,6 +9,9 @@ This GUI application provides a user-friendly interface for running and viewing 
 - **Interactive results viewer**: Navigate through results frame-by-frame
 - **Real-time progress monitoring**: View analysis logs in real-time
 - **Statistical summaries**: View comprehensive analysis statistics
+- **Built-in Analysis Guide & tooltips**: A Help menu explains every step, the
+  math behind it, and the settings; hover tooltips describe each control
+- **Normalization presets**: One-click "Robust" vs "Default" intensity normalization
 
 ## Installation & Requirements
 
@@ -42,10 +45,17 @@ python launch_gui.py
 2. Adjust parameters as needed for your analysis:
 
 **Step 1 - Data Loading:**
-- Normalize Frames: Scale each frame to its brightest pixel
-- Normalization Scale: Multiplier after normalization (default: 100.0)
-- Subtract Background: Remove background using percentile method
-- Background Percentile: Percentile to use as background (default: 10)
+- Normalize Frames: rescale intensities so a reference value maps to the scale
+- Normalization Scale: value the reference maps to (default: 100.0)
+- Norm. Reference: `max` (brightest pixel) or `percentile` (robust to hot pixels)
+- Norm. Percentile: percentile used when reference = percentile (default: 99.9)
+- Norm. Region: `frame` (whole image) or `mask` (in-cell pixels only)
+- Norm. Scope: `per_frame` (each frame to itself) or `global` (one reference for the stack)
+- Subtract Background: remove background using a per-frame percentile
+- Background Percentile: percentile used as background (default: 10)
+- **Robust preset / Default preset** buttons: one-click switch between a robust
+  (percentile / in-mask / global) and the original (max / frame / per_frame)
+  normalization — see "Help, Tooltips & Normalization Options" below.
 
 **Step 2 - Edge Detection:**
 - Smooth Edges: Apply Gaussian smoothing to detected edges
@@ -59,9 +69,14 @@ python launch_gui.py
 - Movement Threshold: Threshold in pixels to classify as moving (default: 5.0)
 
 **Step 5 - Edge Sampling:**
-- Sampling Method: Choose "displacement", "dense", or "per_frame"
-- Displacement Threshold: Minimum displacement for sampling
-- Number of Samples: Target number of samples per frame
+- Sampling Method: `displacement_like` (default), `fixed_x`, `dense`, or `per_frame`
+- Number of Points: points per frame for `per_frame` / `fixed_x` (default: 10)
+- Target Points (displacement): approx points/frame for `displacement_like` (default: ~20)
+
+**Step 7 - Intensity Extraction:**
+- Intensity Statistic: how each rectangle's pixels become one value —
+  `mean` (default), `max` (brightest), or `percentile`
+- Intensity Percentile: percentile used when statistic = percentile (default: 95)
 
 ### 3. Run Analysis
 
@@ -87,8 +102,11 @@ After analysis completes, results automatically load. You can also manually load
    - **Displacement**: Displacement maps and statistics
    - **Classification**: Movement type classification
    - **Sampling**: Sampling rectangle locations
-   - **Intensity**: PIEZO1 intensity measurements
-   - **Correlation**: Intensity vs movement correlation
+   - **Intensity**: PIEZO1 intensity measurements (axis labelled with the
+     normalization + statistic used, e.g. "intensity (mean, % of per-frame max)")
+
+   The intensity-vs-movement correlation plots live in their own
+   **Correlation Analysis** tab (see below), not in this dropdown.
 
 3. Use navigation buttons to move between frames:
    - **◄◄**: First frame
@@ -110,12 +128,46 @@ Switch to the "Statistics" tab to see:
 
 Click "Refresh Statistics" to update after loading new results.
 
+## Help, Tooltips & Normalization Options
+
+### Built-in Analysis Guide (Help menu)
+The menu bar has **Help → Analysis Guide…**, which opens a sectioned reference
+covering every step: its purpose, the **math** behind it, the **default
+settings and why** they were chosen, and how to change them. It also includes a
+**Normalization & Intensity Options** section and a **Sign Conventions &
+Glossary** (e.g. why a *negative* displacement means the edge moved *up/out* =
+extruding). **Help → About** shows version information.
+
+### Tooltips
+Hover the mouse over a control — file pickers, run buttons, the "Configure Step"
+selector, every Step 1 and Step 7 parameter, the preset buttons, and the viewer
+selectors — to see a short explanation of what it does.
+
+### Normalization presets (Step 1 panel)
+By default each frame is normalized to its single brightest pixel, so one hot
+pixel can set the "100" and push edge values low on the scale (and the reference
+varies frame-to-frame). Two buttons switch reference strategy:
+
+- **Robust preset** — `percentile` (99.9), `in-mask`, `global` scope. A stable,
+  cell-based reference that is consistent frame-to-frame; recommended when
+  comparing intensities across time. Note: numbers differ from default-preset
+  runs (not back-comparable), and a few pixels can map slightly above the scale.
+- **Default preset** — restores the original `max` / `frame` / `per_frame`.
+
+After changing normalization, re-run **Step 1 onward** (or "Run All Steps").
+
+### Self-describing plot labels
+Every intensity axis states exactly what was measured, e.g.
+`PIEZO1 intensity (mean, % of per-frame max)` or, with the Robust preset and a
+percentile statistic, `PIEZO1 intensity (95th pct, % of stack in-mask 99.9th pct)`.
+
 ## Understanding the Analysis Workflow
 
 ### Step 1: Data Loading
 - Loads image and mask stacks
-- Optionally subtracts background
-- Optionally normalizes frames
+- Optionally subtracts a per-frame background
+- Optionally normalizes frames to a reference value (brightest pixel or a robust
+  percentile; whole-frame or in-mask; per-frame or one global reference)
 - Saves preprocessed data
 
 ### Step 2: Edge Detection
@@ -145,7 +197,8 @@ Click "Refresh Statistics" to update after loading new results.
 - Prepares for intensity extraction
 
 ### Step 7: Intensity Extraction
-- Extracts mean PIEZO1 intensity from each rectangle
+- Reduces the pixels in each accepted rectangle to one value — `mean` (default),
+  `max`, or a `percentile` (set on the Step 7 panel)
 - Computes intensity statistics
 - Links intensities to edge locations
 
@@ -176,6 +229,13 @@ Click "Refresh Statistics" to update after loading new results.
 - Use 10th percentile for typical data
 - Increase (15-20) for high background
 - Decrease (5) for low background
+
+**Normalization reference:**
+- The default (brightest-pixel, per-frame) can make edge values look low and
+  vary between frames. Click **Robust preset** (percentile / in-mask / global)
+  for a stable, time-comparable reference — recommended for new analyses.
+- Choose the Step 7 **Intensity Statistic** = `max`/`percentile` if you care
+  about bright PIEZO1 puncta rather than the average inside each rectangle.
 
 ### Troubleshooting
 
@@ -244,10 +304,12 @@ Results are saved in standard formats:
 ## Getting Help
 
 If you encounter issues:
-1. Check the Analysis Log for error messages
-2. Review verification figures for quality control
-3. Verify input files are in correct format
-4. Try running individual steps to isolate problems
+1. Open **Help → Analysis Guide…** for step-by-step explanations, the math, and
+   the meaning of each setting (and hover any control for a tooltip)
+2. Check the Analysis Log for error messages
+3. Review verification figures for quality control
+4. Verify input files are in correct format
+5. Try running individual steps to isolate problems
 
 ## Citation
 

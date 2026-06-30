@@ -13,14 +13,18 @@ import matplotlib.pyplot as plt
 import pickle
 import json
 
+from intensity_labels import (build_intensity_label, load_normalization_meta,
+                              DEFAULT_LABEL)
+
 # Configuration
 CONFIG = {
     'INPUT_DIR_STEP1': "step1_results",
     'INPUT_DIR_STEP2': "step2_results",
     'INPUT_DIR_STEP6': "step6_results",
     'OUTPUT_DIR': "step7_results",
-    'show_edge': True  # Display cell edge in verification figures
-,
+    'show_edge': True,  # Display cell edge in verification figures
+    'INTENSITY_STATISTIC': 'mean',  # Per-rectangle aggregation: 'mean', 'max' or 'percentile'
+    'INTENSITY_PERCENTILE': 95,  # Percentile used when INTENSITY_STATISTIC='percentile'
     'CREATE_VERIFICATION_FIGURES': True  # Create verification figures
 }
 
@@ -61,11 +65,16 @@ def parse_arguments():
                         help='Output directory for results')
     parser.add_argument('--show-edge', type=lambda x: x.lower() == 'true',
                         help='Show cell edge in figures (true/false)')
+    parser.add_argument('--intensity-statistic', type=str,
+                        choices=['mean', 'max', 'percentile'],
+                        help="Per-rectangle aggregation: 'mean', 'max' or 'percentile'")
+    parser.add_argument('--intensity-percentile', type=float,
+                        help='Percentile used when --intensity-statistic=percentile (default: 95)')
     parser.add_argument('--create-verification-figures', type=lambda x: x.lower() == 'true',
                         help='Create verification figures (true/false)')
-    
+
     args = parser.parse_args()
-    
+
     # Override CONFIG with command line arguments
     if args.input_dir_step1 is not None:
         CONFIG['INPUT_DIR_STEP1'] = args.input_dir_step1
@@ -77,24 +86,38 @@ def parse_arguments():
         CONFIG['OUTPUT_DIR'] = args.output_dir
     if args.show_edge is not None:
         CONFIG['show_edge'] = args.show_edge
+    if args.intensity_statistic is not None:
+        CONFIG['INTENSITY_STATISTIC'] = args.intensity_statistic
+    if args.intensity_percentile is not None:
+        CONFIG['INTENSITY_PERCENTILE'] = args.intensity_percentile
     if args.create_verification_figures is not None:
         CONFIG['CREATE_VERIFICATION_FIGURES'] = args.create_verification_figures
     
     return args
 
-def extract_intensity_from_rectangle(image, pixels):
-    """Extract mean intensity from rectangle pixels."""
+def extract_intensity_from_rectangle(image, pixels, statistic='mean', percentile=95):
+    """Aggregate intensity over rectangle pixels.
+
+    statistic='mean' (default) averages the rectangle; 'max' reports the
+    brightest pixel; 'percentile' reports the given percentile (e.g. 95th),
+    a robust alternative to max for capturing bright puncta.
+    """
     if len(pixels) == 0:
         return np.nan
 
     # Get intensities
     intensities = image[pixels[:, 0], pixels[:, 1]]
 
-    return np.mean(intensities)
+    if statistic == 'max':
+        return float(np.max(intensities))
+    if statistic == 'percentile':
+        return float(np.percentile(intensities, percentile))
+    return float(np.mean(intensities))
 
-def extract_all_intensities(images, all_rectangles):
-    """Extract intensities for all frames."""
-    print(f"Extracting intensities for {len(all_rectangles)} frames...")
+def extract_all_intensities(images, all_rectangles, statistic='mean', percentile=95):
+    """Extract intensities for all frames using the chosen aggregation statistic."""
+    print(f"Extracting intensities for {len(all_rectangles)} frames "
+          f"(statistic={statistic})...")
 
     intensity_data = []
 
@@ -103,7 +126,8 @@ def extract_all_intensities(images, all_rectangles):
 
         for rect in all_rectangles[i]:
             if rect['accepted']:
-                intensity = extract_intensity_from_rectangle(images[i], rect['pixels'])
+                intensity = extract_intensity_from_rectangle(
+                    images[i], rect['pixels'], statistic, percentile)
             else:
                 intensity = np.nan
 
@@ -122,7 +146,7 @@ def extract_all_intensities(images, all_rectangles):
 
     return intensity_data
 
-def save_intensities(intensity_data, output_dir):
+def save_intensities(intensity_data, output_dir, intensity_label=DEFAULT_LABEL):
     """Save intensity data."""
     os.makedirs(output_dir, exist_ok=True)
 
@@ -144,7 +168,10 @@ def save_intensities(intensity_data, output_dir):
         'n_frames': len(intensity_data),
         'total_measurements': len(all_intensities),
         'valid_measurements': len(valid_intensities),
-        'invalid_measurements': len(all_intensities) - len(valid_intensities)
+        'invalid_measurements': len(all_intensities) - len(valid_intensities),
+        'statistic': CONFIG['INTENSITY_STATISTIC'],
+        'statistic_percentile': CONFIG['INTENSITY_PERCENTILE'],
+        'intensity_label': intensity_label
     }
 
     if valid_intensities:
@@ -162,7 +189,8 @@ def save_intensities(intensity_data, output_dir):
     if valid_intensities:
         print(f"  Mean intensity: {np.mean(valid_intensities):.1f}")
 
-def create_verification_figures(images, all_rectangles, intensity_data, edges, output_dir):
+def create_verification_figures(images, all_rectangles, intensity_data, edges, output_dir,
+                                intensity_label=DEFAULT_LABEL):
     """Create verification figures showing intensity extraction."""
     print("Creating verification figures...")
 
@@ -237,7 +265,7 @@ def create_verification_figures(images, all_rectangles, intensity_data, edges, o
                                      c=intensities, cmap='viridis',
                                      s=100, edgecolors='black', linewidth=1)
             axes[1].set_xlabel('X Position (pixels)')
-            axes[1].set_ylabel('Mean Intensity')
+            axes[1].set_ylabel(intensity_label)
             axes[1].set_title(f'Intensity vs X-Position\nn={len(valid_points)} points')
             axes[1].grid(True, alpha=0.3)
             plt.colorbar(scatter, ax=axes[1], label='Intensity')
@@ -253,7 +281,7 @@ def create_verification_figures(images, all_rectangles, intensity_data, edges, o
                            linestyle='--', linewidth=2, label='Mean')
             axes[2].axvline(x=np.median(intensities), color='g',
                            linestyle='--', linewidth=2, label='Median')
-            axes[2].set_xlabel('Intensity')
+            axes[2].set_xlabel(intensity_label)
             axes[2].set_ylabel('Count')
             axes[2].set_title(f'Intensity Distribution\nMean: {np.mean(intensities):.1f}')
             axes[2].legend()
@@ -284,7 +312,7 @@ def create_verification_figures(images, all_rectangles, intensity_data, edges, o
     if frame_means:
         axes[0, 0].plot(frame_numbers, frame_means, marker='o', markersize=4)
         axes[0, 0].set_xlabel('Frame Number')
-        axes[0, 0].set_ylabel('Mean Intensity')
+        axes[0, 0].set_ylabel(intensity_label)
         axes[0, 0].set_title('Mean Intensity Over Time')
         axes[0, 0].grid(True, alpha=0.3)
 
@@ -298,7 +326,7 @@ def create_verification_figures(images, all_rectangles, intensity_data, edges, o
         axes[0, 1].hist(all_valid, bins=30, edgecolor='black', alpha=0.7, color='skyblue')
         axes[0, 1].axvline(x=np.mean(all_valid), color='r',
                           linestyle='--', linewidth=2, label='Mean')
-        axes[0, 1].set_xlabel('Intensity')
+        axes[0, 1].set_xlabel(intensity_label)
         axes[0, 1].set_ylabel('Count')
         axes[0, 1].set_title('Overall Intensity Distribution')
         axes[0, 1].legend()
@@ -347,15 +375,25 @@ def main():
     # Load previous results
     images, all_rectangles, edges = load_previous_results()
 
+    # Build the intensity axis label from the normalization (step 1) and the
+    # chosen per-rectangle statistic, so all downstream plots are self-describing.
+    norm_meta = load_normalization_meta(CONFIG['INPUT_DIR_STEP1'])
+    intensity_label = build_intensity_label(
+        norm_meta, CONFIG['INTENSITY_STATISTIC'], CONFIG['INTENSITY_PERCENTILE'])
+    print(f"Intensity metric: {intensity_label}")
+
     # Extract intensities
-    intensity_data = extract_all_intensities(images, all_rectangles)
+    intensity_data = extract_all_intensities(
+        images, all_rectangles,
+        CONFIG['INTENSITY_STATISTIC'], CONFIG['INTENSITY_PERCENTILE'])
 
     # Save intensities
-    save_intensities(intensity_data, CONFIG['OUTPUT_DIR'])
+    save_intensities(intensity_data, CONFIG['OUTPUT_DIR'], intensity_label)
 
     # Create verification figures if requested
     if CONFIG['CREATE_VERIFICATION_FIGURES']:
-        create_verification_figures(images, all_rectangles, intensity_data, edges, CONFIG['OUTPUT_DIR'])
+        create_verification_figures(images, all_rectangles, intensity_data, edges,
+                                    CONFIG['OUTPUT_DIR'], intensity_label)
     else:
         print("Skipping verification figures (CREATE_VERIFICATION_FIGURES=False)")
 
