@@ -1,0 +1,64 @@
+{
+  "best_params": {
+    "blur": 18,
+    "thr_scale": 1.0,
+    "close": 6,
+    "band": 150,
+    "curve_sigma": 8
+  },
+  "tuned_median_px": 14.72,
+  "tuned_mean_px": 16.48,
+  "loo_median_px": 17.98,
+  "per_frame": {
+    "1": {
+      "dic": 58.3,
+      "blob_baseline": 45.7,
+      "tuned": 19.4
+    },
+    "7": {
+      "dic": 31.0,
+      "blob_baseline": 11.5,
+      "tuned": 14.5
+    },
+    "14": {
+      "dic": 91.0,
+      "blob_baseline": 8.7,
+      "tuned": 7.4
+    },
+    "22": {
+      "dic": 52.6,
+      "blob_baseline": 53.1,
+      "tuned": 37.6
+    },
+    "38": {
+      "dic": 20.8,
+      "blob_baseline": 17.5,
+      "tuned": 14.9
+    },
+    "51": {
+      "dic": 2.8,
+      "blob_baseline": 3.9,
+      "tuned": 7.2
+    },
+    "62": {
+      "dic": 9.5,
+      "blob_baseline": 3.4,
+      "tuned": 4.7
+    },
+    "80": {
+      "dic": 58.3,
+      "blob_baseline": 34.1,
+      "tuned": 12.5
+    },
+    "86": {
+      "dic": 26.8,
+      "blob_baseline": 47.2,
+      "tuned": 25.5
+    },
+    "93": {
+      "dic": 24.0,
+      "blob_baseline": 23.8,
+      "tuned": 21.0
+    }
+  }
+}
