@@ -1,9 +1,9 @@
 """
 Shared pipeline configuration for cell edge movement analysis.
 
-This module centralizes all pipeline configuration parameters.
-Individual step scripts can import from here instead of duplicating
-configuration dictionaries.
+This module is the single source of the pipeline's default parameters: run_all_steps.py
+uses PIPELINE_CONFIG directly, the Tk GUI takes its initial values from it, and each step
+script's own CONFIG defaults must agree with it (tests/test_defaults_single_source.py).
 """
 
 # Default pipeline configuration
@@ -72,11 +72,15 @@ PIPELINE_CONFIG = {
     'step6': {
         'depth': 50,
         'width': 25,
+        'min_cell_coverage': 0.8,
+        'rotation_method': 'vertical',      # 'none', 'flip', 'search' or 'vertical'
+        'rotation_search_angles': 18,
         'create_verification_figures': True,
     },
 
     # Step 7: Intensity Extraction
     'step7': {
+        'show_edge': True,
         'intensity_statistic': 'mean',   # 'mean', 'max' or 'percentile' per sampling rectangle
         'intensity_percentile': 95,      # used when intensity_statistic='percentile'
         'create_verification_figures': True,
@@ -84,6 +88,7 @@ PIPELINE_CONFIG = {
 
     # Step 8: Movement Assignment
     'step8': {
+        'temporal_direction': 'future',     # 'past' or 'future' frame pair for each measurement
         'create_verification_figures': True,
     },
 

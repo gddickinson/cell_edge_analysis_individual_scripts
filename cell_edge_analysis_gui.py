@@ -24,6 +24,8 @@ from gui_tooltips import attach
 
 # The step scripts live next to this file; resolve them here so the GUI also works when started from another directory.
 SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR))
+from config import PIPELINE_CONFIG as D  # noqa: E402  (initial widget values: the pipeline's defaults)
 
 class AnalysisGUI:
     def __init__(self, root):
@@ -42,34 +44,34 @@ class AnalysisGUI:
 
         # Initialize ALL parameter variables (so they exist when running all steps)
         # Step 1 parameters
-        self.normalize_frames = tk.BooleanVar(value=True)
-        self.normalization_scale = tk.DoubleVar(value=100.0)
-        self.normalization_method = tk.StringVar(value="max")
-        self.normalization_percentile = tk.DoubleVar(value=99.9)
-        self.normalization_region = tk.StringVar(value="frame")
-        self.normalization_scope = tk.StringVar(value="per_frame")
-        self.subtract_background = tk.BooleanVar(value=True)
-        self.background_percentile = tk.DoubleVar(value=10.0)
+        self.normalize_frames = tk.BooleanVar(value=D['step1']['normalize_frames'])
+        self.normalization_scale = tk.DoubleVar(value=D['step1']['normalization_scale'])
+        self.normalization_method = tk.StringVar(value=D['step1']['normalization_method'])
+        self.normalization_percentile = tk.DoubleVar(value=D['step1']['normalization_percentile'])
+        self.normalization_region = tk.StringVar(value=D['step1']['normalization_region'])
+        self.normalization_scope = tk.StringVar(value=D['step1']['normalization_scope'])
+        self.subtract_background = tk.BooleanVar(value=D['step1']['subtract_background'])
+        self.background_percentile = tk.DoubleVar(value=D['step1']['background_percentile'])
 
         # Step 2 parameters
-        self.smooth_edges = tk.BooleanVar(value=True)
-        self.smoothing_sigma = tk.DoubleVar(value=20.0)
+        self.smooth_edges = tk.BooleanVar(value=D['step2']['smooth_edges'])
+        self.smoothing_sigma = tk.DoubleVar(value=D['step2']['smoothing_sigma'])
 
         # Step 3 parameters
-        self.min_movement_pixels = tk.IntVar(value=5)
-        self.arrow_scale = tk.DoubleVar(value=1.0)
+        self.min_movement_pixels = tk.IntVar(value=D['step3']['min_movement_pixels'])
+        self.arrow_scale = tk.DoubleVar(value=D['step3']['arrow_scale'])
 
         # Step 4 parameters
-        self.movement_threshold = tk.DoubleVar(value=5.0)
+        self.movement_threshold = tk.DoubleVar(value=D['step4']['movement_threshold'])
 
         # Step 5 parameters
-        self.sampling_method = tk.StringVar(value="displacement_like")
-        self.n_points = tk.IntVar(value=10)
-        self.target_points_displacement = tk.IntVar(value=5)
+        self.sampling_method = tk.StringVar(value=D['step5']['sampling_method'])
+        self.n_points = tk.IntVar(value=D['step5']['n_points'])
+        self.target_points_displacement = tk.IntVar(value=D['step5']['target_points_displacement'])
 
         # Step 7 parameters
-        self.intensity_statistic = tk.StringVar(value="mean")
-        self.intensity_percentile = tk.DoubleVar(value=95.0)
+        self.intensity_statistic = tk.StringVar(value=D['step7']['intensity_statistic'])
+        self.intensity_percentile = tk.DoubleVar(value=D['step7']['intensity_percentile'])
 
         # Results data
         self.images = None
