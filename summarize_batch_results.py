@@ -14,10 +14,21 @@ def load_statistics(results_dir, dataset_name):
     """Load statistics from a processed dataset."""
     stats = {}
     
-    # Step 9: Correlation statistics
-    step9_file = os.path.join(results_dir, dataset_name, 
-                              'step9_results/correlation_statistics.json')
-    if os.path.exists(step9_file):
+    # Step 9: Correlation statistics (step9_correlation_analysis.py writes final_analysis_summary.json)
+    step9_summary = os.path.join(results_dir, dataset_name,
+                                 'step9_results/final_analysis_summary.json')
+    step9_file = os.path.join(results_dir, dataset_name,
+                              'step9_results/correlation_statistics.json')  # older file name, still read
+    if os.path.exists(step9_summary):
+        with open(step9_summary) as f:
+            summary = json.load(f)
+        corr = summary.get('correlation_analysis', {})
+        overall = corr.get('overall', {})
+        stats['correlation_coefficient'] = overall.get('pearson_r', None)
+        stats['p_value'] = overall.get('p_value', None)
+        stats['r_squared'] = overall.get('r_squared', None)
+        stats['n_points'] = corr.get('n_points', summary.get('data_summary', {}).get('total_valid_points', 0))
+    elif os.path.exists(step9_file):
         with open(step9_file) as f:
             step9_data = json.load(f)
             stats['correlation_coefficient'] = step9_data.get('correlation_coefficient', None)
