@@ -22,6 +22,9 @@ import tifffile
 import gui_help
 from gui_tooltips import attach
 
+# The step scripts live next to this file; resolve them here so the GUI also works when started from another directory.
+SCRIPT_DIR = Path(__file__).resolve().parent
+
 class AnalysisGUI:
     def __init__(self, root):
         self.root = root
@@ -607,7 +610,7 @@ class AnalysisGUI:
         """Execute a single analysis step."""
         try:
             # Build command with parameters
-            cmd = [sys.executable, script]
+            cmd = [sys.executable, str(SCRIPT_DIR / script)]
 
             # Extract step number from script name
             step_num = script.split('step')[1].split('_')[0]

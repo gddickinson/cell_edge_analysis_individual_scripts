@@ -13,6 +13,8 @@ import glob
 from pathlib import Path
 import argparse
 
+# The step scripts live next to this file; resolve them here so the pipeline also runs from another directory.
+SCRIPT_DIR = Path(__file__).resolve().parent
 # ============================================================================
 # PIPELINE CONFIGURATION
 # ============================================================================
@@ -230,7 +232,7 @@ def run_step(step_num, script_name, description, extra_args=None):
     print(f"STEP {step_num}: {description}")
     print("="*70)
 
-    cmd = [sys.executable, script_name]
+    cmd = [sys.executable, str(SCRIPT_DIR / script_name)]
     if extra_args:
         cmd.extend(extra_args)
 
