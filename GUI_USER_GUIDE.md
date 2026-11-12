@@ -70,8 +70,8 @@ python launch_gui.py
 
 **Step 5 - Edge Sampling:**
 - Sampling Method: `displacement_like` (default), `fixed_x`, `dense`, or `per_frame`
-- Number of Points: points per frame for `per_frame` / `fixed_x` (default: 10)
-- Target Points (displacement): approx points/frame for `displacement_like` (default: ~20)
+- Number of Points: points per frame for `per_frame` / `fixed_x` (default: 12)
+- Target Points (displacement): approx points/frame for `displacement_like` (default: 20)
 
 **Step 7 - Intensity Extraction:**
 - Intensity Statistic: how each rectangle's pixels become one value —

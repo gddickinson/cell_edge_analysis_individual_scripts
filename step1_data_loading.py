@@ -41,7 +41,7 @@ def parse_arguments():
     parser.add_argument('--normalize-frames', type=lambda x: x.lower() == 'true',
                         help='Normalize frames (true/false)')
     parser.add_argument('--normalization-scale', type=float,
-                        help='Scaling factor after normalization (default: 1.0)')
+                        help='Scaling factor after normalization (default: 100.0)')
     parser.add_argument('--normalization-method', type=str, choices=['max', 'percentile'],
                         help="Reference value for normalization: 'max' (brightest pixel) "
                              "or 'percentile' (robust to hot pixels)")

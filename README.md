@@ -56,7 +56,7 @@ python summarize_batch_results.py results/
 python combined_batch_analysis.py
 ```
 
-**That's it!** Your correlation analysis results are in `results/DATASET/step9_results/correlation_statistics.json`
+**That's it!** Your correlation analysis results are in `results/DATASET/step9_results/final_analysis_summary.json`
 
 ---
 
@@ -168,7 +168,7 @@ python run_all_steps.py --batch \
 python run_all_steps.py --batch --dataset experiment1
 
 # Review results
-cat results/experiment1/step9_results/correlation_statistics.json
+cat results/experiment1/step9_results/final_analysis_summary.json
 
 # If satisfied, process all
 python run_all_steps.py --batch
@@ -180,7 +180,8 @@ python run_all_steps.py --batch
 
 ### Adjusting Parameters
 
-Edit `run_all_steps.py` to customize analysis parameters:
+Edit `PIPELINE_CONFIG` in `config.py` to customize analysis parameters (run_all_steps.py uses it directly, the GUI
+starts from it, and the step scripts' own defaults match it):
 
 ```python
 PIPELINE_CONFIG = {
@@ -268,7 +269,7 @@ python step1_data_loading.py \
 **Key parameters:**
 - `--subtract-background` - Remove background noise (true/false)
 - `--background-percentile` - Percentile for background (0-100, default: 10)
-- `--normalization-scale` - Scale normalized values (default: 1.0)
+- `--normalization-scale` - Scale normalized values (default: 100.0)
 
 ### Step 2: Edge Detection
 
@@ -282,7 +283,7 @@ python step2_edge_detection.py \
 
 **Key parameters:**
 - `--smooth-edges` - Apply Gaussian smoothing (true/false)
-- `--smoothing-sigma` - Smoothing strength (default: 2.0, range: 0.5-50.0)
+- `--smoothing-sigma` - Smoothing strength (default: 20.0, range: 0.5-50.0)
 
 ### Step 3: Displacement Calculation
 
@@ -377,34 +378,25 @@ results/
     │   ├── combined_statistics.json
     │   └── verification_figures/
     └── step9_results/                          ⭐ MAIN RESULTS
-        ├── correlation_statistics.json         ⭐ Correlation results
-        ├── binned_statistics.json              # Binned analysis
+        ├── final_analysis_summary.json         ⭐ Correlation results
+        ├── correlation_results.pkl             # Full correlation results
         └── verification_figures/               # Result plots
 ```
 
 ### Key Results File
 
-**`correlation_statistics.json`** contains:
+**`final_analysis_summary.json`** contains three sections (keys as written by `step9_correlation_analysis.py`):
 
-```json
-{
-  "correlation_coefficient": 0.456,    // Pearson correlation
-  "p_value": 2.3e-89,                 // Statistical significance
-  "r_squared": 0.208,                 // Coefficient of determination
-  "total_points": 7336,               // Number of data points
-  "mean_displacement": -0.123,        // Average movement
-  "mean_intensity": 123.45,           // Average PIEZO1 intensity
-  "extruding_count": 3012,            // Cells moving outward
-  "retracting_count": 2567,           // Cells moving inward
-  "stable_count": 1757                // Minimal movement
-}
-```
+- `correlation_analysis`: `n_points`, `overall` (`pearson_r`, `r_squared`, `p_value`, `slope`, `intercept`,
+  `std_err`), `by_movement_type` and `comparison_tests`
+- `movement_classifications`: `n_frame_pairs` and the extruding / retracting / stable counts
+- `data_summary`: `n_frames_with_data`, `total_valid_points`
 
 ### Quick Results Check
 
 ```bash
 # View correlation for all datasets
-grep correlation_coefficient results/*/step9_results/correlation_statistics.json
+grep pearson_r results/*/step9_results/final_analysis_summary.json
 
 # Get formatted summary
 python summarize_batch_results.py results/
@@ -616,7 +608,7 @@ mkdir -p data/experiment1 data/experiment2
 python run_all_steps.py --batch --dataset experiment1
 
 # Check results
-cat results/experiment1/step9_results/correlation_statistics.json
+cat results/experiment1/step9_results/final_analysis_summary.json
 
 # Review verification figures
 ls results/experiment1/*/verification_figures/
@@ -625,7 +617,7 @@ ls results/experiment1/*/verification_figures/
 ### 3. Adjust Parameters (if needed)
 
 ```python
-# Edit run_all_steps.py PIPELINE_CONFIG
+# Edit PIPELINE_CONFIG in config.py
 # Modify preprocessing or analysis parameters
 ```
 
