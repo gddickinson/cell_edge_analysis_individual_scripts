@@ -40,6 +40,9 @@ CONFIG = {
     'CREATE_VERIFICATION_FIGURES': True  # Create verification figures
 }
 
+# Coverages within this of the best count as equal in the 'search' rotation method (smallest angle wins).
+COVERAGE_TIE_TOL = 1e-9
+
 def load_previous_results():
     """Load data from previous steps."""
     print("Loading previous results...")
@@ -183,13 +186,9 @@ def search_optimal_rotation(edge_point, initial_normal, width, depth, mask, imag
     - best_coverage: Maximum coverage achieved
     - best_angle: Angle (degrees) that gave best coverage
     """
-    best_coverage = 0.0
-    best_corners = None
-    best_angle = 0.0
-    best_pixels = []
-
     # Test angles from 0 to 360 degrees
     angles = np.linspace(0, 360, n_angles, endpoint=False)
+    candidates = []
 
     for angle in angles:
         # Rotate the normal vector
@@ -200,14 +199,17 @@ def search_optimal_rotation(edge_point, initial_normal, width, depth, mask, imag
 
         # Check coverage
         coverage, pixels = check_cell_coverage(corners, mask)
+        candidates.append((angle, corners, coverage, pixels))
 
-        if coverage > best_coverage:
-            best_coverage = coverage
-            best_corners = corners
-            best_angle = angle
-            best_pixels = pixels
+    max_coverage = max(c[2] for c in candidates)
+    if max_coverage <= 0:
+        return None, 0.0, 0.0, []
 
-    return best_corners, best_coverage, best_angle, best_pixels
+    # Coverages equal up to rounding (the rotated rectangle's area differs in the last digits) are ties:
+    # the smallest such angle wins, so the choice does not depend on floating-point noise.
+    for angle, corners, coverage, pixels in candidates:
+        if coverage >= max_coverage - COVERAGE_TIE_TOL:
+            return corners, coverage, angle, pixels
 
 def check_cell_coverage(rectangle_corners, mask):
     """Check what fraction of rectangle is inside cell.
