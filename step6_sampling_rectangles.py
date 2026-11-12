@@ -281,6 +281,15 @@ def create_rectangles_for_frame(sampled_points, edge, mask):
     rectangles = []
 
     for i, point in enumerate(sampled_points):
+        # Step 5 ('fixed_x') records [nan, x] where no edge point was found: keep the slot, rejected, no pixels
+        if np.any(np.isnan(point)):
+            rectangles.append({
+                'point_index': i, 'edge_point': point, 'normal': np.array([np.nan, np.nan]),
+                'corners': np.full((4, 2), np.nan), 'coverage': 0.0, 'pixels': np.empty((0, 2), dtype=int),
+                'accepted': False, 'rotation_tried': False, 'rotation_angle': 0.0
+            })
+            continue
+
         # Handle 'vertical' method separately (simple vertical rectangles, no normal calculation)
         if CONFIG['rotation_method'] == 'vertical':
             # Use fixed vertical direction (downward in image coordinates)
