@@ -8,3 +8,6 @@ __pycache__/
 
 # web interface
 site/
+
+# hand-labelled masks are data (backed up on FANTOM), not code
+fluorescence_edge_experiments/labeling/labels/*.tif

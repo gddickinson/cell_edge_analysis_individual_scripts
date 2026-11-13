@@ -52,4 +52,4 @@ python step1_data_loading.py --image-stack-path <piezo1.tif> \
 
 ## Outputs (`labels/`)
 - `labels.json` — raw strokes + derived per-column `y(x)` per frame (resumable).
-- `labeled_mask.tif` — the exported mask stack for the pipeline.
+- `labeled_mask.tif` — the exported mask stack for the pipeline (git-ignored: hand-labelled data stays local / on the data drive, not in the repo).
