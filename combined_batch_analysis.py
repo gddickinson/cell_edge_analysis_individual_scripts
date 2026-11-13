@@ -596,7 +596,7 @@ def create_verification_figures(all_combined_data, correlation_results, binned_r
         movement_labels.append(f'Retracting\n(n={np.sum(retracting_mask)})')
         movement_colors.append('red')
     
-    bp = axes[0, 0].boxplot(movement_data, labels=movement_labels,
+    bp = axes[0, 0].boxplot(movement_data, tick_labels=movement_labels,
                             patch_artist=True, widths=0.6)
     for patch, color in zip(bp['boxes'], movement_colors):
         patch.set_facecolor(color)
