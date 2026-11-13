@@ -9,10 +9,10 @@
 | `step3_displacement_calculation.py` | Calculate edge displacement between frames | `step2_results/` | `step3_results/` (.pkl, .npy) |
 | `step4_movement_classification.py` | Classify frames as extruding/retracting/stable | `step1-3_results/` | `step4_results/` (.pkl) |
 | `step5_edge_sampling.py` | Sample points along cell edge | `step2_results/` | `step5_results/` (.pkl) |
-| `step6_sampling_rectangles.py` | Generate sampling rectangles at edge points | `step5_results/` | `step6_results/` (.pkl) |
+| `step6_sampling_rectangles.py` | Generate sampling rectangles at edge points (figures: `step6_figures.py`) | `step5_results/` | `step6_results/` (.pkl) |
 | `step7_intensity_extraction.py` | Extract fluorescence intensities in rectangles | `step1,6_results/` | `step7_results/` (.pkl) |
 | `step8_movement_assignment.py` | Combine intensity and movement data | `step4,7_results/` | `step8_results/` (.pkl) |
-| `step9_correlation_analysis.py` | Correlation analysis and final plots | `step4,8_results/` | `step9_results/` (.json, .png) |
+| `step9_correlation_analysis.py` | Correlation analysis and final plots (figures: `step9_figures.py`) | `step4,8_results/` | `step9_results/` (.json, .png) |
 
 ## Orchestration & Utilities
 
@@ -21,7 +21,7 @@
 | `run_all_steps.py` | Master script: runs all 9 steps sequentially or in batch |
 | `config.py` | **Single source** of pipeline defaults (`PIPELINE_CONFIG`, used by `run_all_steps.py` and the GUI; step scripts' CONFIG must match) and the GUI/web `NORMALIZATION_PRESETS` |
 | `intensity_labels.py` | Builds self-describing intensity axis labels from the normalization (step 1) and per-rectangle statistic (step 7) choices; label is threaded step7→step8→step9 |
-| `combined_batch_analysis.py` | Cross-dataset correlation analysis |
+| `combined_batch_analysis.py` | Cross-dataset correlation analysis (figures: `combined_batch_figures.py`) |
 | `summarize_batch_results.py` | Summary statistics from batch runs |
 
 ## Intensity normalization & aggregation options
@@ -46,7 +46,13 @@ chosen options, e.g. `PIEZO1 intensity (mean, % of per-frame max)`.
 
 | File | Purpose |
 |------|---------|
-| `cell_edge_analysis_gui.py` | Tkinter GUI for interactive pipeline execution |
+| `cell_edge_analysis_gui.py` | Tkinter GUI: `AnalysisGUI` (state + `__init__`) built from the mixins below; `main()` |
+| `gui_layout.py` | `LayoutMixin`: menu bar, setup / results / statistics / correlation tabs, file browsers |
+| `gui_params.py` | `ParamsMixin`: per-step parameter panels, Step 1 presets (`config.NORMALIZATION_PRESETS`) |
+| `gui_run.py` | `RunMixin`: runs the step scripts (subprocess, worker thread), input validation, log |
+| `gui_results.py` | `ResultsMixin`: loads step results, switches the results view |
+| `gui_views.py` | `ViewsMixin`: overview / edges / displacement / classification / sampling / intensity / correlation views |
+| `gui_stats.py` | `StatsMixin`: statistics tab, frame navigation, correlation figures tab |
 | `launch_gui.py` | Thin launcher with dependency checks |
 | `gui_help_content.py` | Help text (one section per step + math, defaults, conventions); pure data |
 | `gui_help.py` | Builds the **Help → Analysis Guide** window from `gui_help_content` |

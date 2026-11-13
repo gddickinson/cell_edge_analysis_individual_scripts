@@ -98,3 +98,18 @@ frame, gap, errors vs labels; seven methods from Python), Guide (GUI help text),
 on the fixture (node tests: 6822 and 8541 checks). The normalisation presets moved to `config.NORMALIZATION_PRESETS`
 (the GUI's preset buttons use them). Demo data are synthetic (`scripts/make_demo_data.py`); the 2 GB `data/` and the
 real `labeled_mask.tif` are not used by the site.
+
+## 2026-11-12 (later) — Border closing fix, matplotlib fix, files split under 500 lines
+
+- Fix: the fluorescence detector (detector.py, tuning/tune_blob.py) closed regions with scipy binary_closing,
+  whose erosion treated the image outside as background and trimmed a `close`-px strip where the region touched
+  the border. Now `edge_methods.close_binary` (erosion with outside = foreground); JS port, fixture and node test
+  updated; RESULTS.md notes its numbers predate this. Test: tests/test_closing_border.py.
+- Fix: combined_batch_analysis.py crashed drawing figures (boxplot `labels=` removed in current matplotlib) ->
+  `tick_labels`; requirements.txt matplotlib >= 3.9. Test: tests/test_combined_figures.py. Same fix in the sibling.
+- Split without behaviour change: step6 / step9 / combined_batch_analysis figure functions moved verbatim to
+  step6_figures.py / step9_figures.py / combined_batch_figures.py (config passed explicitly); the Tk GUI split into
+  mixins gui_layout, gui_params, gui_run, gui_results, gui_views, gui_stats (methods moved verbatim).
+  Verified: run_all_steps (2 demo datasets) + combined + summary + non-default step 1 / step 6 runs give
+  byte-identical outputs (210 files incl. every PNG) before and after; the GUI driven over every view, frame,
+  statistics, correlation plots, presets and parameter panels renders identical figures and text.
