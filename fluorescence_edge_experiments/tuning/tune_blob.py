@@ -20,7 +20,6 @@ import json
 import itertools
 import numpy as np
 from scipy import ndimage as ndi
-from skimage.morphology import disk
 
 import matplotlib
 matplotlib.use('Agg')
@@ -59,7 +58,7 @@ def clean_binary(blurred, otsu, thr_scale, close):
         return None
     b = blurred > (otsu * thr_scale)
     if close > 0:
-        b = ndi.binary_closing(b, structure=disk(close))
+        b = em.close_binary(b, close)
     return em.largest_component(ndi.binary_fill_holes(b))
 
 

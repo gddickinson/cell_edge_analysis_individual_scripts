@@ -6,7 +6,7 @@ intensity_labels and fluorescence_edge_experiments) or by the library calls that
     (edge_engine.js + intensity_engine.js)
   - labels: intensity_labels.build_intensity_label for many option combinations
   - percentile: numpy.percentile of a float32 demo frame
-  - fluor: scipy gaussian_filter / binary_closing / binary_fill_holes / label, skimage threshold_otsu, the detector's
+  - fluor: scipy gaussian_filter / edge_methods.close_binary / binary_fill_holes / label, skimage threshold_otsu, the detector's
     despike / smooth_curve on small inputs, and detector.fluor_edge + edge_dic on the demo (fluor_engine.js)
 tests/test_web_fixture.py checks the fixture is current; web/static/*.test.mjs check JS against it.
 
@@ -19,7 +19,6 @@ from pathlib import Path
 import numpy as np
 import tifffile
 from scipy import ndimage as ndi
-from skimage.morphology import disk
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -92,7 +91,7 @@ def fluor_parts(pre):
         "otsu": [{"values": v.ravel().tolist(), "t": fluor.em._safe_otsu(v)} for v in
                  (img, np.round(img), np.r_[np.zeros(50), np.ones(30) * 7.5, rng.normal(3, 1, 40)])]
         + [{"demo_frame": 4, "blur": 18, "t": fluor.em._safe_otsu(blurred)}],
-        "binary": [{"bin": b.tolist(), "closing3": ndi.binary_closing(b, structure=disk(3)).astype(int).tolist(),
+        "binary": [{"bin": b.tolist(), "closing3": fluor.em.close_binary(b, 3).astype(int).tolist(),
                     "fill": ndi.binary_fill_holes(b).astype(int).tolist(),
                     "largest": fluor.em.largest_component(b > 0).astype(int).tolist()} for b in small_binaries()],
         "curves": [{"y": [None if np.isnan(v) else v for v in c],

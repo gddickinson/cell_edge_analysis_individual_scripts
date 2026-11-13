@@ -19,6 +19,7 @@ Methods are grouped by what information they use:
 import numpy as np
 from scipy import ndimage as ndi
 from skimage import filters, segmentation
+from skimage.morphology import disk
 
 # 'uppermost' (min y) matches the pipeline default; 'lowermost' (max y) flips it.
 SELECT = 'uppermost'
@@ -61,6 +62,20 @@ def largest_component(binary):
         return binary
     sizes = ndi.sum(np.ones_like(lbl), lbl, index=np.arange(1, n + 1))
     return lbl == (int(np.argmax(sizes)) + 1)
+
+
+def close_binary(binary, radius):
+    """Morphological closing with a disk that does not erode regions touching the image border.
+
+    scipy's binary_closing applies one border_value to both steps, so its erosion treats the outside as background
+    and trims a ``radius``-pixel strip wherever the region meets the image edge. Here the dilation treats the outside
+    as background and the erosion as foreground (the usual definition, as skimage.morphology.binary_closing).
+    """
+    if radius <= 0:
+        return np.asarray(binary, bool)
+    se = disk(radius)
+    dilated = ndi.binary_dilation(binary, structure=se, border_value=0)
+    return ndi.binary_erosion(dilated, structure=se, border_value=1)
 
 
 def smooth_curve(y, sigma=4.0):

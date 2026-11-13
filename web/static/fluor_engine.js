@@ -1,6 +1,6 @@
 // JS port of the tuned fluorescence edge detector (fluorescence_edge_experiments/detector.py fluor_edge) and the DIC
 // baseline (edge_methods.edge_dic), with the library calls they make: scipy.ndimage gaussian_filter (reflect),
-// skimage threshold_otsu (256-bin histogram), binary_closing with skimage disk, binary_fill_holes, label (largest
+// skimage threshold_otsu (256-bin histogram), edge_methods.close_binary (disk), binary_fill_holes, label (largest
 // component), median_filter and gaussian_filter1d (nearest), numpy interp. No DOM. Edges are per-column y(x) arrays
 // (NaN where undefined), 'uppermost' geometry. Tested against Python by fluor_engine.test.mjs.
 import { gaussianKernel, gaussianFilter1d, extend } from './contours.js';
@@ -75,7 +75,8 @@ function disk(r) {
   return o;
 }
 
-// scipy binary_closing(bin, disk(r)): dilation then erosion, border_value 0 (outside the image counts as background).
+// edge_methods.close_binary(bin, r): dilation (outside the image = background) then erosion (outside = foreground),
+// so regions touching the image border are not eroded.
 export function binaryClosing(bin, h, w, r) {
   const off = disk(r), dil = new Uint8Array(h * w), out = new Uint8Array(h * w);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -88,7 +89,7 @@ export function binaryClosing(bin, h, w, r) {
     let all = 1;
     for (const [dy, dx] of off) {
       const yy = y + dy, xx = x + dx;
-      if (yy < 0 || yy >= h || xx < 0 || xx >= w || !dil[yy * w + xx]) { all = 0; break; }
+      if (yy >= 0 && yy < h && xx >= 0 && xx < w && !dil[yy * w + xx]) { all = 0; break; }
     }
     out[y * w + x] = all;
   }

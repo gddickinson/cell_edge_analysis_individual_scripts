@@ -27,6 +27,12 @@ It roughly **halves** the DIC edge error and is robust — no catastrophic frame
 Where DIC was already accurate (frames 51, 62) the tuned edge costs a few px;
 where DIC was badly off (frames 1, 14, 80) it corrects 40–80 px.
 
+## Note (2026-11-12): closing at the image border
+The numbers above were produced with scipy's `binary_closing`, which also eroded a `close`-pixel strip wherever
+the bright region touched the image border (its erosion treated the outside as background). The detector and this
+script now use `edge_methods.close_binary` (outside = foreground for the erosion), so the outer columns can differ
+slightly from these results; re-run `tune_blob.py` on the labelled data to refresh them.
+
 ## Known refinements (not yet done)
 - **Border spikes**: a few columns at the left/right edges (where the DIC edge is
   undefined) can spike; trim/clamp the outer columns.
