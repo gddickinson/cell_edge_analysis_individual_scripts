@@ -102,6 +102,14 @@ PIPELINE_CONFIG = {
     },
 }
 
+# Step 1 normalisation presets offered by the GUI (Step 1 panel buttons) and the web app.
+NORMALIZATION_PRESETS = {
+    'default': {'normalize_frames': True, 'normalization_method': 'max', 'normalization_percentile': 99.9,
+                'normalization_region': 'frame', 'normalization_scope': 'per_frame'},
+    'robust': {'normalize_frames': True, 'normalization_method': 'percentile', 'normalization_percentile': 99.9,
+               'normalization_region': 'mask', 'normalization_scope': 'global', 'subtract_background': True},
+}
+
 
 def get_movement_threshold():
     """Get the movement threshold, ensuring step4 and step9 stay synchronized.

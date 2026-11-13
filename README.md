@@ -4,6 +4,7 @@ A comprehensive Python pipeline for analyzing PIEZO1 protein localization and ce
 
 ## 📋 Table of Contents
 
+- [Web Interface](#-web-interface)
 - [Quick Start](#quick-start)
 - [What This Pipeline Does](#what-this-pipeline-does)
 - [Installation](#installation)
@@ -14,6 +15,43 @@ A comprehensive Python pipeline for analyzing PIEZO1 protein localization and ce
 - [Output Files](#output-files)
 - [Troubleshooting](#troubleshooting)
 - [Advanced Features](#advanced-features)
+
+---
+
+## 🌐 Web Interface
+
+**Live site: https://gddickinson.github.io/cell_edge_analysis_individual_scripts/** (static, runs in your browser).
+It focuses on what this repository adds; the full nine-step analyser lives on the sibling site
+[cell_edge_analysis](https://gddickinson.github.io/cell_edge_analysis/).
+
+- **Intensity scale**: the step 1 normalisation options (max / percentile, whole frame / in-mask, per frame /
+  whole stack) and the step 7 per-rectangle statistic (mean / max / percentile) side by side with the defaults,
+  per-frame reference values, mean edge intensity, the profile along the edge and the self-describing axis label
+  (`intensity_labels.py`). CSV export.
+- **Fluorescence edge**: the tuned detector from `fluorescence_edge_experiments/detector.py` on every frame with
+  adjustable parameters, the DIC-vs-fluorescence gap per frame, errors against labels (load a `labels.json` from the
+  labelling app), and all seven candidate methods (`edge_methods.py`).
+- **Guide**: the GUI's Help → Analysis Guide (`gui_help_content.py`).
+
+Both analysis pages run JavaScript ports of the Python (`web/static/edge_engine.js`, `intensity_engine.js`,
+`fluor_engine.js`), checked against the repo's own functions by node tests (`web/static/*.test.mjs`, fixture from
+`scripts/make_web_fixture.py`). Your files are read in the browser, not uploaded. The demo data are **synthetic**
+(`scripts/make_demo_data.py`: a moving edge with a grainy PIEZO1-like rim, hot pixels, debris, photobleaching, a
+"DIC" mask displaced by a known amount per frame and the true edge as labels); no measured data are published.
+
+Run it locally (adds compressed-TIFF reading and "Check with Python" buttons that re-run a frame with the Python):
+
+```bash
+pip install -r requirements-web.txt
+python run_web.py                     # http://127.0.0.1:8173
+python -m pytest -q tests             # includes the web tests and the JS-vs-Python node tests
+python scripts/build_static.py        # the static site into site/ (published by .github/workflows/pages.yml)
+```
+
+![Home](docs/img/home.png)
+![Intensity settings compared with the defaults](docs/img/intensity_results.png)
+![Fluorescence edge: per-frame gap and errors](docs/img/edges_results.png)
+![Fluorescence edge on one frame: DIC edge, detector edge and labels](docs/img/edges_frame.png)
 
 ---
 

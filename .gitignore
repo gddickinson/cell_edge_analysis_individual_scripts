@@ -5,3 +5,6 @@ __pycache__/
 .ipynb_checkpoints/
 # local recordings and analysis outputs (2 GB)
 /data/
+
+# web interface
+site/

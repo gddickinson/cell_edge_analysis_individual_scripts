@@ -74,3 +74,27 @@ labels:
   the example config defaults that contradicted `config.py`
   (normalization_scale 1.0→100.0, smoothing_sigma 2.0→20.0).
 - `INTERFACE.md` — already lists the new modules and options.
+
+## 2026-11-12 — Fixes ported from the sibling repo, web interface and static site
+
+**Fixes (each with a failing-first regression test, separate commits):** the same bugs as in the sibling repo
+cell_edge_analysis were present here:
+- step scripts not found when `run_all_steps.py` / the GUI start from another directory (now resolved next to the file);
+- `summarize_batch_results.py` read `correlation_statistics.json`, which no step writes (now `final_analysis_summary.json`);
+- step 6 crashed on the `[nan, x]` points `fixed_x` sampling writes (now a rejected rectangle);
+- step 6 `search` chose among equal-coverage angles by rounding noise (smallest angle within 1e-9 now wins);
+- defaults had drifted: `run_all_steps.py` kept its own `PIPELINE_CONFIG` copy (config.py unused), the GUI started with
+  n_points 10 / target_points_displacement 5 (pipeline 12 / 20) and step 8 alone used temporal_direction 'past'
+  (pipeline 'future'). `config.py` is now the single source; batch values kept, so batch results are unchanged.
+- Docs: README pointed to the never-written step 9 file and to editing run_all_steps.py; CLI help / README gave
+  normalization scale 1.0 and smoothing sigma 2.0 (code 100.0 / 20.0).
+Verified end-to-end: `run_all_steps.py --batch` on the synthetic demo from another directory, all 9 steps, and the summary.
+
+**Web interface** (`web/`, `python run_web.py`, port 8173) and static GitHub Pages site (`.github/workflows/pages.yml`),
+focused on what this repo adds over the sibling (whose site has the full step 1-7 analyser and is linked):
+Intensity scale (step 1 normalisation + step 7 statistic vs defaults), Fluorescence edge (tuned detector on every
+frame, gap, errors vs labels; seven methods from Python), Guide (GUI help text), About. JS ports
+(`intensity_engine.js`, `fluor_engine.js`, + `edge_engine.js`/`contours.js` from the sibling) agree with the Python
+on the fixture (node tests: 6822 and 8541 checks). The normalisation presets moved to `config.NORMALIZATION_PRESETS`
+(the GUI's preset buttons use them). Demo data are synthetic (`scripts/make_demo_data.py`); the 2 GB `data/` and the
+real `labeled_mask.tif` are not used by the site.

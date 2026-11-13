@@ -19,7 +19,7 @@
 | File | Purpose |
 |------|---------|
 | `run_all_steps.py` | Master script: runs all 9 steps sequentially or in batch |
-| `config.py` | **Shared** pipeline configuration (centralized `PIPELINE_CONFIG`) |
+| `config.py` | **Single source** of pipeline defaults (`PIPELINE_CONFIG`, used by `run_all_steps.py` and the GUI; step scripts' CONFIG must match) and the GUI/web `NORMALIZATION_PRESETS` |
 | `intensity_labels.py` | Builds self-describing intensity axis labels from the normalization (step 1) and per-rectangle statistic (step 7) choices; label is threaded step7→step8→step9 |
 | `combined_batch_analysis.py` | Cross-dataset correlation analysis |
 | `summarize_batch_results.py` | Summary statistics from batch runs |
@@ -63,6 +63,42 @@ Step 1 panel (Robust = percentile 99.9 / in-mask / global).
 | `tests/test_config.py` | Configuration validation and threshold sync tests |
 | `tests/test_step1.py` | Data loading, validation, and preprocessing tests |
 | `tests/test_step2.py` | Edge detection smoke tests |
+| `tests/test_intensity_labels.py` | Axis-label builder |
+| `tests/test_defaults_single_source.py` | Step scripts, run_all_steps and GUI share config.py's defaults |
+| `tests/test_script_paths.py`, `test_summarize_batch.py`, `test_step6_nan_points.py`, `test_rotation_search_ties.py` | Regression tests for fixed bugs |
+| `tests/test_web.py` | Web API, static build, node tests of the JS ports (the CI suite) |
+| `tests/test_web_fixture.py` | JS-vs-Python fixture and demo data are current (skipped when `CI` is set) |
+
+## Fluorescence edge experiments (`fluorescence_edge_experiments/`, exploratory)
+
+| File | Purpose |
+|------|---------|
+| `edge_methods.py` | Seven candidate edge detectors `fn(image, mask) -> y(x)` (`METHODS`), helpers |
+| `detector.py` | Tuned DIC-banded blurred-blob detector `fluor_edge` (`BEST` params) |
+| `run_experiments.py` | Method comparison figures + `gap_between` QC metric |
+| `labeling/` | Hand-labelling app (`label_app.py`, `label_io.py`), labels |
+| `tuning/tune_blob.py` | Parameter sweep vs labels (`frame_error`), RESULTS.md |
+| `review/` | Run the detector over a stack and review it |
+
+## Web interface (`web/`, `python run_web.py`, port 8173)
+
+| File | Purpose |
+|------|---------|
+| `run_web.py` | Starts the FastAPI app on 127.0.0.1:8173 |
+| `web/app.py` | Routes: GET `/api/info`, `/api/guide`, `/api/methods` (exported to the static site via `STATIC_ENDPOINTS`); POST `/api/tiff`, `/api/analyse`, `/api/fluor` (local app only) |
+| `web/analysis.py` | Runs the step 1/2/5/6/7 functions (with normalisation + statistic options) on in-memory stacks |
+| `web/fluor.py` | Runs `detector.fluor_edge`, `edge_methods`, `gap_between`, `frame_error` on in-memory stacks |
+| `web/guide.py` | `gui_help_content.HELP_SECTIONS` for the Guide page |
+| `web/tiff_io.py` | tifffile reader + pixel size from the file |
+| `web/static/edge_engine.js`, `contours.js` | JS port of steps 2, 5, 6 (shared with the sibling repo) |
+| `web/static/intensity_engine.js` | JS port of step 1 normalisation, step 7 statistic, intensity labels |
+| `web/static/fluor_engine.js` | JS port of `detector.fluor_edge` and the scipy/skimage calls it uses |
+| `web/static/*.test.mjs`, `testkit.mjs` | Node tests against `tests/fixtures/web_fixture.json` |
+| `web/static/intensity.js`, `edges.js`, `edges_methods.js`, `guide.js`, `home.js`, `about.js` | Pages |
+| `web/static/stack_io.js`, `plots.js`, `tiff.js`, `core.js`, `main.js`, `static_api.js` | Loading, drawing, router, static-site API |
+| `web/static/demo/` | SYNTHETIC labelled demo (from `scripts/make_demo_data.py`) |
+| `scripts/make_demo_data.py`, `make_web_fixture.py` | Demo data and JS-vs-Python fixture |
+| `scripts/build_static.py`, `screenshots.py` | Static site export (Pages workflow), smoke test + README images |
 
 ## Data Flow
 

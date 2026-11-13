@@ -25,7 +25,7 @@ from gui_tooltips import attach
 # The step scripts live next to this file; resolve them here so the GUI also works when started from another directory.
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
-from config import PIPELINE_CONFIG as D  # noqa: E402  (initial widget values: the pipeline's defaults)
+from config import NORMALIZATION_PRESETS, PIPELINE_CONFIG as D  # noqa: E402  (initial widget values: the pipeline's defaults)
 
 class AnalysisGUI:
     def __init__(self, root):
@@ -131,14 +131,14 @@ class AnalysisGUI:
 
         self.root.config(menu=menubar)
 
+    def _apply_preset(self, preset):
+        """Set the Step 1 variables named in a config.NORMALIZATION_PRESETS entry."""
+        for key, value in preset.items():
+            getattr(self, key).set(value)
+
     def apply_robust_normalization_preset(self):
         """Set a robust, time-consistent normalization (percentile / in-mask / global)."""
-        self.normalize_frames.set(True)
-        self.normalization_method.set("percentile")
-        self.normalization_percentile.set(99.9)
-        self.normalization_region.set("mask")
-        self.normalization_scope.set("global")
-        self.subtract_background.set(True)
+        self._apply_preset(NORMALIZATION_PRESETS['robust'])
         self.log("Applied ROBUST normalization preset: percentile 99.9, in-mask, "
                  "global scope. (Re-run Step 1 onward; values are not comparable "
                  "to runs made with the default preset.)")
@@ -148,11 +148,7 @@ class AnalysisGUI:
 
     def apply_default_normalization_preset(self):
         """Restore the original normalization (max / whole-frame / per-frame)."""
-        self.normalize_frames.set(True)
-        self.normalization_method.set("max")
-        self.normalization_percentile.set(99.9)
-        self.normalization_region.set("frame")
-        self.normalization_scope.set("per_frame")
+        self._apply_preset(NORMALIZATION_PRESETS['default'])
         self.log("Restored DEFAULT normalization preset: brightest-pixel reference, "
                  "whole frame, per-frame scope.")
         if "Step 1" in self.step_var.get():

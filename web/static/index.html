@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cell Edge Analysis · individual scripts</title>
+<meta name="description" content="PIEZO1 at the cell edge: how the step 1 normalisation and step 7 statistic change the measured intensity, and finding the cell edge from the fluorescence instead of the DIC mask, in your browser.">
+<link rel="icon" href="static/icon.svg">
+<link rel="stylesheet" href="static/style.css">
+<link rel="stylesheet" href="static/style_app.css">
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<header class="top">
+  <a class="brand" href="#/"><span class="mark"></span>Cell Edge · scripts</a>
+  <nav class="groups">
+    <a href="#/intensity" data-nav="intensity">Intensity scale</a>
+    <a href="#/edges" data-nav="edges">Fluorescence edge</a>
+    <a href="#/guide" data-nav="guide">Guide</a>
+    <a href="#/about" data-nav="about">About</a>
+  </nav>
+  <div class="right"><a class="small mute" href="https://gddickinson.github.io/cell_edge_analysis/" target="_blank" rel="noopener">Full pipeline site</a> · <a class="small mute" href="https://github.com/gddickinson/cell_edge_analysis_individual_scripts" target="_blank" rel="noopener">GitHub</a></div>
+</header>
+<main id="app" tabindex="-1"></main>
+<footer class="foot">Cell Edge Analysis (individual scripts) · <a href="https://github.com/gddickinson/cell_edge_analysis_individual_scripts">source on GitHub</a> · sibling: <a href="https://gddickinson.github.io/cell_edge_analysis/">cell_edge_analysis</a> · <span id="mode"></span></footer>
+<script type="module" src="static/main.js"></script>
+</body>
+</html>
