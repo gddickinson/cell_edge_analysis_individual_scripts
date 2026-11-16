@@ -34,7 +34,7 @@ def parse_arguments():
     parser.add_argument('--smooth-edges', type=lambda x: x.lower() == 'true',
                         help='Apply Gaussian smoothing to edges (true/false)')
     parser.add_argument('--smoothing-sigma', type=float,
-                        help='Sigma for Gaussian smoothing (default: 2.0, higher = more smoothing)')
+                        help='Sigma for Gaussian smoothing (default: 20.0, higher = more smoothing)')
     parser.add_argument('--create-verification-figures', type=lambda x: x.lower() == 'true',
                         help='Create verification figures (true/false)')
 

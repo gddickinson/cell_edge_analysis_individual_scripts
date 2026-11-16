@@ -5,3 +5,9 @@ __pycache__/
 .ipynb_checkpoints/
 # local recordings and analysis outputs (2 GB)
 /data/
+
+# web interface
+site/
+
+# hand-labelled masks are data (backed up on FANTOM), not code
+fluorescence_edge_experiments/labeling/labels/*.tif

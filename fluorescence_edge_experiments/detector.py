@@ -16,7 +16,6 @@ import os
 import sys
 import numpy as np
 from scipy import ndimage as ndi
-from skimage.morphology import disk
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import edge_methods as em
@@ -67,7 +66,7 @@ def fluor_edge(image, mask, blur=18, thr_scale=1.0, close=6, band=150,
         return dic.copy()
     binary = b > (t * thr_scale)
     if close > 0:
-        binary = ndi.binary_closing(binary, structure=disk(close))
+        binary = em.close_binary(binary, close)
     binary = em.largest_component(ndi.binary_fill_holes(binary))
 
     y = top_edge_banded(binary, dic, band)

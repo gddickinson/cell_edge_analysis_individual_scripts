@@ -74,3 +74,42 @@ labels:
   the example config defaults that contradicted `config.py`
   (normalization_scale 1.0→100.0, smoothing_sigma 2.0→20.0).
 - `INTERFACE.md` — already lists the new modules and options.
+
+## 2026-11-12 — Fixes ported from the sibling repo, web interface and static site
+
+**Fixes (each with a failing-first regression test, separate commits):** the same bugs as in the sibling repo
+cell_edge_analysis were present here:
+- step scripts not found when `run_all_steps.py` / the GUI start from another directory (now resolved next to the file);
+- `summarize_batch_results.py` read `correlation_statistics.json`, which no step writes (now `final_analysis_summary.json`);
+- step 6 crashed on the `[nan, x]` points `fixed_x` sampling writes (now a rejected rectangle);
+- step 6 `search` chose among equal-coverage angles by rounding noise (smallest angle within 1e-9 now wins);
+- defaults had drifted: `run_all_steps.py` kept its own `PIPELINE_CONFIG` copy (config.py unused), the GUI started with
+  n_points 10 / target_points_displacement 5 (pipeline 12 / 20) and step 8 alone used temporal_direction 'past'
+  (pipeline 'future'). `config.py` is now the single source; batch values kept, so batch results are unchanged.
+- Docs: README pointed to the never-written step 9 file and to editing run_all_steps.py; CLI help / README gave
+  normalization scale 1.0 and smoothing sigma 2.0 (code 100.0 / 20.0).
+Verified end-to-end: `run_all_steps.py --batch` on the synthetic demo from another directory, all 9 steps, and the summary.
+
+**Web interface** (`web/`, `python run_web.py`, port 8173) and static GitHub Pages site (`.github/workflows/pages.yml`),
+focused on what this repo adds over the sibling (whose site has the full step 1-7 analyser and is linked):
+Intensity scale (step 1 normalisation + step 7 statistic vs defaults), Fluorescence edge (tuned detector on every
+frame, gap, errors vs labels; seven methods from Python), Guide (GUI help text), About. JS ports
+(`intensity_engine.js`, `fluor_engine.js`, + `edge_engine.js`/`contours.js` from the sibling) agree with the Python
+on the fixture (node tests: 6822 and 8541 checks). The normalisation presets moved to `config.NORMALIZATION_PRESETS`
+(the GUI's preset buttons use them). Demo data are synthetic (`scripts/make_demo_data.py`); the 2 GB `data/` and the
+real `labeled_mask.tif` are not used by the site.
+
+## 2026-11-12 (later) — Border closing fix, matplotlib fix, files split under 500 lines
+
+- Fix: the fluorescence detector (detector.py, tuning/tune_blob.py) closed regions with scipy binary_closing,
+  whose erosion treated the image outside as background and trimmed a `close`-px strip where the region touched
+  the border. Now `edge_methods.close_binary` (erosion with outside = foreground); JS port, fixture and node test
+  updated; RESULTS.md notes its numbers predate this. Test: tests/test_closing_border.py.
+- Fix: combined_batch_analysis.py crashed drawing figures (boxplot `labels=` removed in current matplotlib) ->
+  `tick_labels`; requirements.txt matplotlib >= 3.9. Test: tests/test_combined_figures.py. Same fix in the sibling.
+- Split without behaviour change: step6 / step9 / combined_batch_analysis figure functions moved verbatim to
+  step6_figures.py / step9_figures.py / combined_batch_figures.py (config passed explicitly); the Tk GUI split into
+  mixins gui_layout, gui_params, gui_run, gui_results, gui_views, gui_stats (methods moved verbatim).
+  Verified: run_all_steps (2 demo datasets) + combined + summary + non-default step 1 / step 6 runs give
+  byte-identical outputs (210 files incl. every PNG) before and after; the GUI driven over every view, frame,
+  statistics, correlation plots, presets and parameter panels renders identical figures and text.

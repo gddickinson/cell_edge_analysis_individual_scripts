@@ -235,8 +235,9 @@ MATH  For each intensity point, the displacement from step 3 at the nearest x
   the correlation.
 
 DEFAULTS & WHY
-  The batch pipeline uses temporal_direction = 'future' (does present intensity
-  predict the NEXT move?). 'past' asks whether intensity followed the last move.
+  The default (config.py, used by the batch pipeline and the GUI) is
+  temporal_direction = 'future' (does present intensity predict the NEXT move?).
+  'past' asks whether intensity followed the last move.
   Configurable via --temporal-direction (not a GUI control)."""
 
 _STEP9 = """\

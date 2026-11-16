@@ -20,7 +20,7 @@ CONFIG = {
     'INPUT_DIR_STEP3': "step3_results",
     'INPUT_DIR_STEP7': "step7_results",
     'OUTPUT_DIR': "step8_results",
-    'temporal_direction': 'past'  # 'past' or 'future'
+    'temporal_direction': 'future'  # 'past' or 'future' (as config.PIPELINE_CONFIG)
 ,
     'CREATE_VERIFICATION_FIGURES': True  # Create verification figures
 }
